@@ -17,4 +17,4 @@ appVersion: 2.21.5
 name: fluent-bit-aws
 #sources:
 #- https://github.com/aws/eks-charts
-version: 0.1.2
+version: 0.1.3
