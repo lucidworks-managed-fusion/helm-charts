@@ -3,10 +3,18 @@ entries:
   fluent-bit-aws:
   - apiVersion: v1
     appVersion: 2.21.5
+    created: "2022-08-08T20:53:23.074774283Z"
+    digest: 79318fe297afd5c58c4a643c4d0140fc13f87cd908138a7bda3dabb04785d5f9
+    name: fluent-bit-aws
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fluent-bit-aws-0.1.1/fluent-bit-aws-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v1
+    appVersion: 2.21.5
     created: "2022-08-08T19:16:26.540859146Z"
     digest: e02cebb243c04b0d1d80dae59029cde422cbdc932eaac53d543b7e5c8be36de8
     name: fluent-bit-aws
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fluent-bit-aws-0.1.0/fluent-bit-aws-0.1.0.tgz
     version: 0.1.0
-generated: "2022-08-08T19:16:26.540868446Z"
+generated: "2022-08-08T20:53:23.074792684Z"
