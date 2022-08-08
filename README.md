@@ -1,1 +1,1 @@
-# helm-charts
+# Lucidworks Managed Fusion public Helm Charts
