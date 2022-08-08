@@ -165,7 +165,6 @@ volumes:
   - name: runlogjournal
     hostPath:
       path: /run/log/journal
-    readOnly: true
   - name: dmesg
     hostPath:
       path: /var/log/dmesg
