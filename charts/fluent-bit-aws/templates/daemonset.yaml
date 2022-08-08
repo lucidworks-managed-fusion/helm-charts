@@ -42,9 +42,9 @@ spec:
             - name: CLUSTER_NAME
               value: {{ .Values.cloudwatch.clusterName }}
             - name: HTTP_SERVER
-              value: {{ .Values.server.http.server }}
+              value: {{ .Values.service.http.server }}
             - name: HTTP_PORT
-              value: {{ .Values.server.http.port }}
+              value: {{ .Values.service.http.port }}
             - name: READ_FROM_HEAD
               value: {{ .Values.cloudwatch.readFrom.head }}
             - name: READ_FROM_TAIL
