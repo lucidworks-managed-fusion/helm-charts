@@ -1,12 +1,12 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: {{ include "aws-for-fluent-bit.fullname" . }}
+  name: {{ include "fluent-bit-aws.fullname" . }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: {{ include "aws-for-fluent-bit.fullname" . }}
+  name: {{ include "fluent-bit-aws.fullname" . }}
 subjects:
   - kind: ServiceAccount
-    name: {{ include "aws-for-fluent-bit.serviceAccountName" . }}
-    namespace: {{ include "aws-for-fluent-bit.namespace" . }}
+    name: {{ include "fluent-bit-aws.serviceAccountName" . }}
+    namespace: {{ include "fluent-bit-aws.namespace" . }}

@@ -2,7 +2,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "aws-for-fluent-bit.name" -}}
+{{- define "fluent-bit-aws.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
@@ -11,7 +11,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "aws-for-fluent-bit.fullname" -}}
+{{- define "fluent-bit-aws.fullname" -}}
 {{- if .Values.fullnameOverride -}}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
@@ -27,16 +27,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "aws-for-fluent-bit.chart" -}}
+{{- define "fluent-bit-aws.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
 Common labels
 */}}
-{{- define "aws-for-fluent-bit.labels" -}}
-helm.sh/chart: {{ include "aws-for-fluent-bit.chart" . }}
-{{ include "aws-for-fluent-bit.selectorLabels" . }}
+{{- define "fluent-bit-aws.labels" -}}
+helm.sh/chart: {{ include "fluent-bit-aws.chart" . }}
+{{ include "fluent-bit-aws.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -46,22 +46,22 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "aws-for-fluent-bit.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "aws-for-fluent-bit.name" . }}
-app.kubernetes.io/instance: {{ include "aws-for-fluent-bit.fullname" . }}
+{{- define "fluent-bit-aws.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "fluent-bit-aws.name" . }}
+app.kubernetes.io/instance: {{ include "fluent-bit-aws.fullname" . }}
 {{- end -}}
 
 {{/*
 Create the name of the service account to use
 */}}
-{{- define "aws-for-fluent-bit.serviceAccountName" -}}
-  {{ default (include "aws-for-fluent-bit.fullname" .) .Values.serviceAccount.name }}
+{{- define "fluent-bit-aws.serviceAccountName" -}}
+  {{ default (include "fluent-bit-aws.fullname" .) .Values.serviceAccount.name }}
 {{- end -}}
 
 {{/*
 Allow the release namespace to be overridden for multi-namespace deployments in combined charts.
 */}}
-{{- define "aws-for-fluent-bit.namespace" -}}
+{{- define "fluent-bit-aws.namespace" -}}
   {{- if .Values.global -}}
     {{- if .Values.global.namespaceOverride -}}
       {{- .Values.global.namespaceOverride -}}

@@ -1,16 +1,16 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: {{ include "aws-for-fluent-bit.fullname" . }}
-  namespace: {{ include "aws-for-fluent-bit.namespace" . }}
+  name: {{ include "fluent-bit-aws.fullname" . }}
+  namespace: {{ include "fluent-bit-aws.namespace" . }}
   labels:
-    {{- include "aws-for-fluent-bit.labels" . | nindent 4 }}
+    {{- include "fluent-bit-aws.labels" . | nindent 4 }}
 spec:
   updateStrategy:
 {{ toYaml .Values.updateStrategy | indent 4 }}
   selector:
     matchLabels:
-      {{- include "aws-for-fluent-bit.selectorLabels" . | nindent 6 }}
+      {{- include "fluent-bit-aws.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:
@@ -19,13 +19,13 @@ spec:
         {{- toYaml .Values.annotations | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "aws-for-fluent-bit.selectorLabels" . | nindent 8 }}
+        {{- include "fluent-bit-aws.selectorLabels" . | nindent 8 }}
     spec:
       {{- if .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml .Values.imagePullSecrets | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "aws-for-fluent-bit.serviceAccountName" . }}
+      serviceAccountName: {{ include "fluent-bit-aws.serviceAccountName" . }}
       {{- if .Values.priorityClassName }}
       priorityClassName: {{ .Values.priorityClassName }}
       {{- end }}
@@ -36,23 +36,46 @@ spec:
         - name: {{ .Chart.Name }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          {{- if .Values.env }}
           env:
+            - name: AWS_REGION
+              value: {{ .Values.cloudwatch.region }}
+            - name: CLUSTER_NAME
+              value: {{ .Values.cloudwatch.clusterName }}
+            - name: HTTP_SERVER
+              value: {{ .Values.server.http.server }}
+            - name: HTTP_PORT
+              value: {{ .Values.server.http.port }}
+            - name: READ_FROM_HEAD
+              value: {{ .Values.cloudwatch.readFrom.head }}
+            - name: READ_FROM_TAIL
+              value: {{ .Values.cloudwatch.readFrom.tail }}
+            - name: HOST_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.name
+            - name: CI_VERSION
+              value: "k8s/1.3.11"
+          {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}
-          volumeMounts:
-            - name: fluentbit-config
-              mountPath: /fluent-bit/etc/
+          #   - name: fluentbit-config
+          #     mountPath: /fluent-bit/etc/
             {{- if .Values.volumeMounts }}
+          volumeMounts:
             {{- toYaml .Values.volumeMounts | nindent 12 }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      volumes:
-        - name: fluentbit-config
-          configMap:
-            name: {{ include "aws-for-fluent-bit.fullname" . }}
+        # - name: fluentbit-config
+        #   configMap:
+        #     name: {{ include "fluent-bit-aws.fullname" . }}
         {{- if .Values.volumes }}
+      volumes:
         {{- toYaml .Values.volumes | nindent 8 }}
         {{- end}}
       {{- if .Values.tolerations }}

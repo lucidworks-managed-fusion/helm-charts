@@ -1,174 +1,227 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: {{ include "aws-for-fluent-bit.fullname" . }}
-  namespace: {{ include "aws-for-fluent-bit.namespace" . }}
+  name: {{ include "fluent-bit-aws.fullname" . }}
+  namespace: {{ include "fluent-bit-aws.namespace" . }}
   labels:
-    {{- include "aws-for-fluent-bit.labels" . | nindent 4 }}
+    {{- include "fluent-bit-aws.labels" . | nindent 4 }}
 data:
   fluent-bit.conf: |
     [SERVICE]
+        Flush                     5
+        Log_Level                 info
+        Daemon                    off
+        Parsers_File              parsers.conf
+        HTTP_Server               ${HTTP_SERVER}
+        HTTP_Listen               0.0.0.0
+        HTTP_Port                 ${HTTP_PORT}
+        storage.path              /var/fluent-bit/state/flb-storage/
+        storage.sync              normal
+        storage.checksum          off
+        storage.backlog.mem_limit 5M
 {{- if .Values.service.extraService }}
 {{ .Values.service.extraService | indent 8 }}
 {{- end }}
+
+    @INCLUDE application-log.conf
+    @INCLUDE dataplane-log.conf
+    @INCLUDE host-log.conf
+
+  application-log.conf: |
+    [INPUT]
+        Name                tail
+        Tag                 application.*
+        Exclude_Path        /var/log/containers/cloudwatch-agent*, /var/log/containers/fluent-bit*, /var/log/containers/aws-node*, /var/log/containers/kube-proxy*
+        Path                /var/log/containers/*.log
+        Docker_Mode         On
+        Docker_Mode_Flush   5
+        Docker_Mode_Parser  container_firstline
+        Parser              docker
+        DB                  /var/fluent-bit/state/flb_container.db
+        Mem_Buf_Limit       50MB
+        Skip_Long_Lines     On
+        Refresh_Interval    10
+        Rotate_Wait         30
+        storage.type        filesystem
+        Read_from_Head      ${READ_FROM_HEAD}
+
+    [INPUT]
+        Name                tail
+        Tag                 application.*
+        Path                /var/log/containers/fluent-bit*
+        Parser              docker
+        DB                  /var/fluent-bit/state/flb_log.db
+        Mem_Buf_Limit       5MB
+        Skip_Long_Lines     On
+        Refresh_Interval    10
+        Read_from_Head      ${READ_FROM_HEAD}
+
+    [INPUT]
+        Name                tail
+        Tag                 application.*
+        Path                /var/log/containers/cloudwatch-agent*
+        Docker_Mode         On
+        Docker_Mode_Flush   5
+        Docker_Mode_Parser  cwagent_firstline
+        Parser              docker
+        DB                  /var/fluent-bit/state/flb_cwagent.db
+        Mem_Buf_Limit       5MB
+        Skip_Long_Lines     On
+        Refresh_Interval    10
+        Read_from_Head      ${READ_FROM_HEAD}
+
+    [FILTER]
+        Name                kubernetes
+        Match               application.*
+        Kube_URL            https://kubernetes.default.svc:443
+        Kube_Tag_Prefix     application.var.log.containers.
+        Merge_Log           On
+        Merge_Log_Key       log_processed
+        K8S-Logging.Parser  On
+        K8S-Logging.Exclude Off
+        Labels              Off
+        Annotations         Off
+        Use_Kubelet         On
+        Kubelet_Port        10250
+        Buffer_Size         0
+
+    [OUTPUT]
+        Name                cloudwatch_logs
+        Match               application.*
+        region              ${AWS_REGION}
+        log_group_name      /aws/containerinsights/${CLUSTER_NAME}/application
+        log_stream_prefix   ${HOST_NAME}-
+        auto_create_group   true
+        extra_user_agent    container-insights
+
+  dataplane-log.conf: |
+    [INPUT]
+        Name                systemd
+        Tag                 dataplane.systemd.*
+        Systemd_Filter      _SYSTEMD_UNIT=docker.service
+        Systemd_Filter      _SYSTEMD_UNIT=kubelet.service
+        DB                  /var/fluent-bit/state/systemd.db
+        Path                /var/log/journal
+        Read_From_Tail      ${READ_FROM_TAIL}
+
+    [INPUT]
+        Name                tail
+        Tag                 dataplane.tail.*
+        Path                /var/log/containers/aws-node*, /var/log/containers/kube-proxy*
+        Docker_Mode         On
+        Docker_Mode_Flush   5
+        Docker_Mode_Parser  container_firstline
+        Parser              docker
+        DB                  /var/fluent-bit/state/flb_dataplane_tail.db
+        Mem_Buf_Limit       50MB
+        Skip_Long_Lines     On
+        Refresh_Interval    10
+        Rotate_Wait         30
+        storage.type        filesystem
+        Read_from_Head      ${READ_FROM_HEAD}
+
+    [FILTER]
+        Name                modify
+        Match               dataplane.systemd.*
+        Rename              _HOSTNAME                   hostname
+        Rename              _SYSTEMD_UNIT               systemd_unit
+        Rename              MESSAGE                     message
+        Remove_regex        ^((?!hostname|systemd_unit|message).)*$
+
+    [FILTER]
+        Name                aws
+        Match               dataplane.*
+        imds_version        v1
+
+    [OUTPUT]
+        Name                cloudwatch_logs
+        Match               dataplane.*
+        region              ${AWS_REGION}
+        log_group_name      /aws/containerinsights/${CLUSTER_NAME}/dataplane
+        log_stream_prefix   ${HOST_NAME}-
+        auto_create_group   true
+        extra_user_agent    container-insights
+    
+  host-log.conf: |
+    [INPUT]
+        Name                tail
+        Tag                 host.dmesg
+        Path                /var/log/dmesg
+        Parser              syslog
+        DB                  /var/fluent-bit/state/flb_dmesg.db
+        Mem_Buf_Limit       5MB
+        Skip_Long_Lines     On
+        Refresh_Interval    10
+        Read_from_Head      ${READ_FROM_HEAD}
+
+    [INPUT]
+        Name                tail
+        Tag                 host.messages
+        Path                /var/log/messages
+        Parser              syslog
+        DB                  /var/fluent-bit/state/flb_messages.db
+        Mem_Buf_Limit       5MB
+        Skip_Long_Lines     On
+        Refresh_Interval    10
+        Read_from_Head      ${READ_FROM_HEAD}
+
+    [INPUT]
+        Name                tail
+        Tag                 host.secure
+        Path                /var/log/secure
+        Parser              syslog
+        DB                  /var/fluent-bit/state/flb_secure.db
+        Mem_Buf_Limit       5MB
+        Skip_Long_Lines     On
+        Refresh_Interval    10
+        Read_from_Head      ${READ_FROM_HEAD}
+
+    [FILTER]
+        Name                aws
+        Match               host.*
+        imds_version        v1
+
+    [OUTPUT]
+        Name                cloudwatch_logs
+        Match               host.*
+        region              ${AWS_REGION}
+        log_group_name      /aws/containerinsights/${CLUSTER_NAME}/host
+        log_stream_prefix   ${HOST_NAME}.
+        auto_create_group   true
+        extra_user_agent    container-insights
+
+  parsers.conf: |
+    [PARSER]
+        Name                docker
+        Format              json
+        Time_Key            time
+        Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
+
+    [PARSER]
+        Name                syslog
+        Format              regex
+        Regex               ^(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+        Time_Key            time
+        Time_Format         %b %d %H:%M:%S
+
+    [PARSER]
+        Name                container_firstline
+        Format              regex
+        Regex               (?<log>(?<="log":")\S(?!\.).*?)(?<!\\)".*(?<stream>(?<="stream":").*?)".*(?<time>\d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.\w*).*(?=})
+        Time_Key            time
+        Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
+
+    [PARSER]
+        Name                cwagent_firstline
+        Format              regex
+        Regex               (?<log>(?<="log":")\d{4}[\/-]\d{1,2}[\/-]\d{1,2}[ T]\d{2}:\d{2}:\d{2}(?!\.).*?)(?<!\\)".*(?<stream>(?<="stream":").*?)".*(?<time>\d{4}-\d{1,2}-\d{1,2}T\d{2}:\d{2}:\d{2}\.\w*).*(?=})
+        Time_Key            time
+        Time_Format         %Y-%m-%dT%H:%M:%S.%LZ
 {{- range .Values.service.parsersFiles }}
         Parsers_File {{ . }}
 {{- end }}
 {{- if .Values.service.extraParsers }}
         Parsers_File /fluent-bit/etc/parser_extra.conf
-{{- end }}
-
-    [INPUT]
-        Name              tail
-        Tag               {{ .Values.input.tag }}
-        Path              {{ .Values.input.path }}
-        DB                {{ .Values.input.db }}
-        Parser            {{ .Values.input.parser }}
-        Docker_Mode       {{ .Values.input.dockerMode }}
-        Mem_Buf_Limit     {{ .Values.input.memBufLimit }}
-        Skip_Long_Lines   {{ .Values.input.skipLongLines }}
-        Refresh_Interval  {{ .Values.input.refreshInterval }}
-{{- if .Values.input.extraInputs }}
-{{ .Values.input.extraInputs | indent 8 }}
-{{- end }}
-
-{{- if .Values.additionalInputs }}
-{{ .Values.additionalInputs | indent 4 }}
-{{- end }}
-
-    [FILTER]
-        Name                kubernetes
-        Match               {{ .Values.filter.match }}
-        Kube_URL            {{ .Values.filter.kubeURL }}
-        Merge_Log           {{ .Values.filter.mergeLog }}
-        {{- if .Values.filter.mergeLogKey }}
-        Merge_Log_Key       {{ .Values.filter.mergeLogKey }}
-        {{- end }}
-        Keep_Log            {{ .Values.filter.keepLog }}
-        K8S-Logging.Parser  {{ .Values.filter.k8sLoggingParser }}
-        K8S-Logging.Exclude {{ .Values.filter.k8sLoggingExclude }}
-        Buffer_Size         {{ .Values.filter.bufferSize }}
-{{- if .Values.filter.extraFilters }}
-{{ .Values.filter.extraFilters | indent 8 }}
-{{- end }}
-
-{{- if .Values.additionalFilters }}
-{{ .Values.additionalFilters | indent 4}}
-{{- end }}
-
-{{- if .Values.cloudWatch.enabled }}
-    [OUTPUT]
-        Name                  cloudwatch
-        Match                 {{ .Values.cloudWatch.match }}
-        region                {{ .Values.cloudWatch.region }}
-        log_group_name        {{ .Values.cloudWatch.logGroupName }}
-        {{- if .Values.cloudWatch.logStreamName }}
-        log_stream_name       {{ .Values.cloudWatch.logStreamName }}
-        {{- end }}
-        {{- if .Values.cloudWatch.logStreamPrefix }}
-        log_stream_prefix     {{ .Values.cloudWatch.logStreamPrefix }}
-        {{- end }}
-        {{- if .Values.cloudWatch.logKey }}
-        log_key               {{ .Values.cloudWatch.logKey }}
-        {{- end }}
-        {{- if .Values.cloudWatch.logFormat }}
-        log_format            {{ .Values.cloudWatch.logFormat }}
-        {{- end }}
-        {{- if .Values.cloudWatch.logRetentionDays }}
-        log_retention_days    {{ .Values.cloudWatch.logRetentionDays }}
-        {{- end }}
-        {{- if .Values.cloudWatch.roleArn }}
-        role_arn              {{ .Values.cloudWatch.roleArn }}
-        {{- end }}
-        {{- if .Values.cloudWatch.autoCreateGroup }}
-        auto_create_group     {{ .Values.cloudWatch.autoCreateGroup }}
-        {{- end }}
-        {{- if .Values.cloudWatch.endpoint }}
-        endpoint              {{ .Values.cloudWatch.endpoint }}
-        {{- end }}
-        {{- if .Values.cloudWatch.credentialsEndpoint }}
-        credentials_endpoint  {{ toJson .Values.cloudWatch.credentialsEndpoint }}
-        {{- end -}}
-        {{- if .Values.cloudWatch.extraOutputs }}
-{{ .Values.cloudWatch.extraOutputs | indent 8 }}
-        {{- end }}
-{{- end }}
-
-{{- if .Values.firehose.enabled }}
-    [OUTPUT]
-        Name            firehose
-        Match           {{ .Values.firehose.match }}
-        region          {{ .Values.firehose.region }}
-        delivery_stream {{ .Values.firehose.deliveryStream }}
-        {{- if .Values.firehose.dataKeys }}
-        data_keys       {{ .Values.firehose.dataKeys }}
-        {{- end }}
-        {{- if .Values.firehose.roleArn }}
-        role_arn        {{ .Values.firehose.roleArn }}
-        {{- end }}
-        {{- if .Values.firehose.endpoint }}
-        endpoint        {{ .Values.firehose.endpoint }}
-        {{- end }}
-        {{- if .Values.firehose.timeKey }}
-        time_key        {{ .Values.firehose.timeKey }}
-        {{- end }}
-        {{- if .Values.firehose.timeKeyFormat }}
-        time_key_format {{ .Values.firehose.timeKeyFormat }}
-        {{- end -}}
-        {{- if .Values.kinesis.extraOutputs }}
-{{ .Values.kinesis.extraOutputs | indent 8 }}
-        {{- end }}
-{{- end }}
-
-{{- if .Values.kinesis.enabled }}
-    [OUTPUT]
-        Name            kinesis
-        Match           {{ .Values.kinesis.match }}
-        region          {{ .Values.kinesis.region }}
-        stream          {{ .Values.kinesis.stream }}
-        {{- if .Values.kinesis.partitionKey }}
-        partition_key   {{ .Values.kinesis.partitionKey }}
-        {{- end }}
-        {{- if .Values.kinesis.appendNewline }}
-        append_newline  {{ .Values.kinesis.appendNewline }}
-        {{- end }}
-        {{- if .Values.kinesis.replaceDots }}
-        replace_dots    {{ .Values.kinesis.replaceDots }}
-        {{- end }}
-        {{- if .Values.kinesis.dataKeys }}
-        data_keys       {{ .Values.kinesis.dataKeys }}
-        {{- end }}
-        {{- if .Values.kinesis.roleArn }}
-        role_arn        {{ .Values.kinesis.roleArn }}
-        {{- end }}
-        {{- if .Values.kinesis.endpoint }}
-        endpoint        {{ .Values.kinesis.endpoint }}
-        {{- end }}
-        {{- if .Values.kinesis.stsEndpoint }}
-        sts_endpoint    {{ .Values.kinesis.stsEndpoint }}
-        {{- end }}
-        {{- if .Values.kinesis.timeKey }}
-        time_key        {{ .Values.kinesis.timeKey }}
-        {{- end }}
-        {{- if .Values.kinesis.timeKeyFormat }}
-        time_key_format {{ .Values.kinesis.timeKeyFormat }}
-        {{- end }}
-        {{- if .Values.kinesis.aggregation }}
-        aggregation     {{ .Values.kinesis.aggregation }}
-        {{- end }}
-        {{- if .Values.kinesis.compression }}
-        compression     {{ .Values.kinesis.compression }}
-        {{- end }}
-
-        {{- if .Values.kinesis.experimental.concurrency }}
-        experimental_concurrency          {{ .Values.kinesis.experimental.concurrency }}
-        {{- end }}
-        {{- if .Values.kinesis.experimental.concurrencyRetries }}
-        experimental_concurrency_retries  {{ .Values.kinesis.experimental.concurrencyRetries }}
-        {{- end -}}
-        {{- if .Values.kinesis.extraOutputs }}
-{{ .Values.kinesis.extraOutputs | indent 8 }}
-        {{- end }}
 {{- end }}
 
 {{- if .Values.elasticsearch.enabled }}

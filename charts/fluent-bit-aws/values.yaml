@@ -3,7 +3,7 @@ global:
 #   namespaceOverride:
 
 image:
-  repository: public.ecr.aws/aws-observability/aws-for-fluent-bit
+  repository: public.ecr.aws/aws-observability/fluent-bit-aws
   tag: 2.21.5
   pullPolicy: IfNotPresent
 
@@ -11,15 +11,33 @@ imagePullSecrets: []
 nameOverride: ""
 fullnameOverride: ""
 
+cloudwatch:
+  region: "us-west-2"
+  clusterName: "cluster-name"
+  readFrom:
+    tail: "On"
+    head: "Off"
 service:
+  http:
+    server: "On"
+    port: "2020"
+
   ## Allow the service to be exposed for monitoring
   ## https://docs.fluentbit.io/manual/administration/monitoring
   # extraService: |
-  #   HTTP_Server  On
-  #   HTTP_Listen  0.0.0.0
-  #   HTTP_PORT    2020
-  parsersFiles:
-    - /fluent-bit/parsers/parsers.conf
+  #   Flush                     5
+  #   Log_Level                 info
+  #   Daemon                    off
+  #   Parsers_File              parsers.conf
+  #   HTTP_Server               ${HTTP_SERVER}
+  #   HTTP_Listen               0.0.0.0
+  #   HTTP_Port                 ${HTTP_PORT}
+  #   storage.path              /var/fluent-bit/state/flb-storage/
+  #   storage.sync              normal
+  #   storage.checksum          off
+  #   storage.backlog.mem_limit 5M
+  # parsersFiles:
+  #   - /fluent-bit/parsers/parsers.conf
   # extraParsers: |
   #   [PARSER]
   #       Name   logfmt
@@ -62,57 +80,6 @@ filter:
 #       Match  *
 #       Exclude log lvl=debug*
 
-cloudWatch:
-  enabled: true
-  match: "*"
-  region: "us-east-1"
-  logGroupName: "/aws/eks/fluentbit-cloudwatch/logs"
-  logStreamName:
-  logStreamPrefix: "fluentbit-"
-  logKey:
-  logFormat:
-  logRetentionDays:
-  roleArn:
-  autoCreateGroup: true
-  endpoint:
-  credentialsEndpoint: {}
-  # extraOutputs: |
-  #   ...
-
-firehose:
-  enabled: true
-  match: "*"
-  region: "us-east-1"
-  deliveryStream: "my-stream"
-  dataKeys:
-  roleArn:
-  endpoint:
-  timeKey:
-  # extraOutputs: |
-  #   ...
-
-kinesis:
-  enabled: true
-  match: "*"
-  region: "us-east-1"
-  stream: "my-kinesis-stream-name"
-  partitionKey: "container_id"
-  appendNewline:
-  replaceDots:
-  dataKeys:
-  roleArn:
-  endpoint:
-  stsEndpoint:
-  timeKey:
-  timeKeyFormat:
-  compression:
-  aggregation:
-  experimental:
-    concurrency:
-    concurrencyRetries:
-  # extraOutputs: |
-  #   ...
-
 elasticsearch:
   enabled: true
   match: "*"
@@ -141,8 +108,8 @@ resources:
   limits:
     memory: 250Mi
   requests:
-    cpu: 50m
-    memory: 50Mi
+    cpu: 500m
+    memory: 100Mi
 
 ## Assign a PriorityClassName to pods if set
 # priorityClassName: system-node-critical
@@ -156,10 +123,11 @@ tolerations: []
 
 affinity: {}
 
-annotations: {}
+annotations:
+  {}
   # iam.amazonaws.com/role: arn:aws:iam::123456789012:role/role-for-fluent-bit
 
-# Specifies if aws-for-fluent-bit should be started in hostNetwork mode.
+# Specifies if fluent-bit-aws should be started in hostNetwork mode.
 #
 # This is required if using a custom CNI where the managed control plane nodes are unable to initiate
 # network connections to the pods, for example using Calico CNI plugin on EKS. This is not required or
@@ -184,7 +152,6 @@ env: []
 #       fieldRef:
 #         fieldPath: spec.nodeName
 
-
 volumes:
   - name: varlog
     hostPath:
@@ -192,14 +159,32 @@ volumes:
   - name: varlibdockercontainers
     hostPath:
       path: /var/lib/docker/containers
+  - name: fluentbitstate
+    hostPath:
+      path: /var/fluent-bit/state
+  - name: runlogjournal
+    hostPath:
+      path: /run/log/journal
+    readOnly: true
+  - name: dmesg
+    hostPath:
+      path: /var/log/dmesg
 
 volumeMounts:
   - name: varlog
     mountPath: /var/log
+    readOnly: true
   - name: varlibdockercontainers
     mountPath: /var/lib/docker/containers
     readOnly: true
-
+  - name: fluentbitstate
+    mountPath: /var/fluent-bit/state
+  - name: runlogjournal
+    mountPath: /run/log/journal
+    readOnly: true
+  - name: dmesg
+    mountPath: /var/log/dmesg
+    readOnly: true
 
 serviceMonitor:
   # service:

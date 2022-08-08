@@ -1,6 +1,6 @@
 # AWS for fluent bit
 
-A helm chart for [AWS-for-fluent-bit](https://github.com/aws/aws-for-fluent-bit)
+A helm chart for [AWS-for-fluent-bit](https://github.com/aws/fluent-bit-aws)
 
 ## Installing the Chart
 
@@ -13,15 +13,15 @@ helm repo add eks https://aws.github.io/eks-charts
 Install or upgrading the AWS for fluent bit chart with default configuration:
 
 ```bash
-helm upgrade --install aws-for-fluent-bit --namespace kube-system eks/aws-for-fluent-bit
+helm upgrade --install fluent-bit-aws --namespace kube-system eks/fluent-bit-aws
 ```
 
 ## Uninstalling the Chart
 
-To uninstall/delete the `aws-for-fluent-bit` release:
+To uninstall/delete the `fluent-bit-aws` release:
 
 ```bash
-helm delete aws-for-fluent-bit --namespace kube-system
+helm delete fluent-bit-aws --namespace kube-system
 ```
 
 ## Configuration
@@ -29,12 +29,12 @@ helm delete aws-for-fluent-bit --namespace kube-system
 | Parameter | Description | Default | Required |
 | - | - | - | -
 | `global.namespaceOverride` | Override the deployment namespace | Not set (`Release.Namespace`) |
-| `image.repository` | Image to deploy | `amazon/aws-for-fluent-bit` | ✔
+| `image.repository` | Image to deploy | `amazon/fluent-bit-aws` | ✔
 | `image.tag` | Image tag to deploy | `2.21.5`
 | `image.pullPolicy` | Pull policy for the image | `IfNotPresent` | ✔
 | `imagePullSecrets` | Docker registry pull secret | `[]` |
 | `serviceAccount.create` | Whether a new service account should be created | `true` |
-| `serviceAccount.name` | Name of the service account | `aws-for-fluent-bit` |
+| `serviceAccount.name` | Name of the service account | `fluent-bit-aws` |
 | `serviceAccount.create` | Whether a new service account should be created | `true` |
 | `service.extraService` | Append to existing service with this value | `""` |
 | `service.parsersFiles` | List of available parser files | `/fluent-bit/parsers/parsers.conf` |
