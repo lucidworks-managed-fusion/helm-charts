@@ -33,4 +33,26 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fluent-bit-aws-0.1.0/fluent-bit-aws-0.1.0.tgz
     version: 0.1.0
-generated: "2022-08-08T21:12:34.173963608Z"
+  fusion-basistech:
+  - apiVersion: v1
+    appVersion: 1.0.0
+    created: "2023-04-25T17:16:11.878897617Z"
+    description: A Helm chart to deploy basistech volumes
+    digest: 3090325ceaaec8f9691163a532bb45eeda21ec3f00c9aa6204c852cd2d9da65c
+    home: https://github.com/lucidworks-managed-fusion/helm-charts.git
+    keywords:
+    - fusion
+    - basistech
+    - solr
+    - rex
+    - rbl
+    - lucidworks
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion
+    name: fusion-basistech
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-basistech-0.0.1/fusion-basistech-0.0.1.tgz
+    version: 0.0.1
+generated: "2023-04-25T17:16:11.878920017Z"
