@@ -1,0 +1,23 @@
+global: {}
+## Override the deployment namespace
+#   namespaceOverride:
+#  basistechVolumeName:
+
+basistechVolumeName: ""
+
+storageClassName: ""
+
+storage: 80Gi
+
+serviceAccount: {}
+role: {}
+roleBinding: {}
+
+forceDownload: false
+
+rex:
+  image: rosette/root-rex-root:7.52.0.c65.0
+rbl:
+  image: rosette/root-rbl:7.42.2.c65.0
+
+languages: []

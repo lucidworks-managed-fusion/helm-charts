@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "fusion-basistech.roleBindingName" . }}
+  namespace: {{ include "fusion-basistech.namespace" . }}
+  annotations:
+    {{- include "fusion-basistech.roleHookAnnotations" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "fusion-basistech.serviceAccountName" . }}
+roleRef:
+  kind: Role
+  name: {{ include "fusion-basistech.roleName" . }}
+  apiGroup: rbac.authorization.k8s.io

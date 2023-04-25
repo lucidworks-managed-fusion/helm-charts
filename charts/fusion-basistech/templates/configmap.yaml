@@ -1,0 +1,129 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fusion-basistech.fullname" . }}
+  namespace: {{ include "fusion-basistech.namespace" . }}
+  annotations:
+    {{- include "fusion-basistech.roleHookAnnotations" . | nindent 4 }}
+data:
+  delete_remains.sh: |-
+    #!/bin/bash
+    
+    PVC_COUNT=$(kubectl get pvc {{ include "fusion-basistech.persistentVolumeClaim" . }} --no-headers -o name 2>/dev/null)
+    if [[ ! -z $PVC_COUNT ]] ; then
+      kubectl delete -f /opt/pod-files/volume-snapshot.yaml
+    fi
+
+  run_pod.sh: |-
+    #!/bin/bash
+    
+    PVC_COUNT=$(kubectl get pvc {{ include "fusion-basistech.persistentVolumeClaim" . }} --no-headers -o name 2>/dev/null)
+
+    {{- if not .Values.forceDownload }}
+    if [[ ! -z $PVC_COUNT ]] ; then
+      echo "VOLUME EXISTS"
+      exit 0
+    fi
+    {{- end }}
+
+    if [[ ! -z $PVC_COUNT ]] ; then
+      kubectl delete -f /opt/pod-files/volume-snapshot.yaml
+    fi
+
+    kubectl apply -f /opt/pod-files/basistech_builder.yaml
+    kubectl wait --for=condition=ready pod/{{ include "fusion-basistech.filesBuilder" . }} --timeout=-1s
+    kubectl logs --follow pod/{{ include "fusion-basistech.filesBuilder" . }}
+    kubectl apply -f /opt/pod-files/volume-snapshot.yaml
+    sleep 2
+    kubectl apply -f /opt/pod-files/volume-user-pod.yaml
+    kubectl wait --for=condition=ready pod/volume-user-pod --timeout=-1s
+    kubectl logs --follow pod/volume-user-pod
+    kubectl delete pod/{{ include "fusion-basistech.filesBuilder" . }} pod/volume-user-pod --grace-period=0 --force
+
+
+  volume-user-pod.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: volume-user-pod
+      namespace: {{ include "fusion-basistech.namespace" . }}
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: volume-user-container
+          image: busybox:1.28
+          command: ["sh", "-c", "echo The volume has been created! && sleep 30"]
+          volumeMounts:
+            - name: basistech
+              mountPath: /rosette/server/roots
+              readOnly: true
+      volumes:
+        - name: basistech
+          persistentVolumeClaim:
+            claimName: {{ include "fusion-basistech.persistentVolumeClaim" . }}
+            readOnly: true
+
+
+  volume-snapshot.yaml: |-
+    apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      name: {{ include "fusion-basistech.persistentVolumeClaim" . }}
+      namespace: {{ include "fusion-basistech.namespace" . }}
+      labels:
+        type: local
+          {{- include "fusion-basistech.labels" . | nindent 8 }}
+
+    spec:
+      dataSource:
+        name: {{ include "fusion-basistech.temporaryPersistentVolumeClaim" . }}
+        kind: PersistentVolumeClaim
+      accessModes:
+        - ReadOnlyMany
+      {{- if .Values.storageClassName }}
+      storageClassName: {{ .Values.storageClassName }}
+      {{- else }}
+      storageClassName: manual
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.storage }}  
+
+  basistech_builder.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: {{ include "fusion-basistech.filesBuilder" . }}
+      namespace: {{ include "fusion-basistech.namespace" . }}
+    spec:
+      volumes:
+        - name: basistech
+          persistentVolumeClaim: 
+            claimName: {{ include "fusion-basistech.temporaryPersistentVolumeClaim" .}}
+      restartPolicy: OnFailure
+      containers:
+      - name: basistech-downloader
+        image: busybox:1.28
+        command: ['sh', '-c', 'echo The app is running! && sleep 5']
+        volumeMounts:
+        - name: basistech
+          mountPath: /rosette/server/roots
+      initContainers:
+      - name: root-rex-root
+        image: {{ .Values.rex.image }}
+        volumeMounts:
+          - name: basistech
+            mountPath: /roots-vol
+      - name: root-rbl
+        image: {{ .Values.rbl.image }}
+        volumeMounts:
+          - name: basistech
+            mountPath: /roots-vol
+
+{{- range $.Values.languages }}
+      - name: {{ .name }}
+        image: {{ .image }}
+        volumeMounts:
+          - name: basistech
+            mountPath: /roots-vol
+{{- end -}}

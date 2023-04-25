@@ -1,0 +1,29 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "{{ include "fusion-basistech.name" .}}"
+  annotations:
+    {{- include "fusion-basistech.preInstallAnnotations" . | nindent 4 }}
+spec:
+  template:
+    metadata:
+      name: "{{ include "fusion-basistech.name" .}}"    
+    spec:
+      serviceAccountName:  {{ include "fusion-basistech.serviceAccountName" . }}
+      volumes:
+        - name: pod-definition
+          configMap:
+            name: {{ include "fusion-basistech.fullname" . }}
+            defaultMode: 0555
+
+      containers:
+      - name: main
+        image: bitnami/kubectl
+        volumeMounts:
+          - name: pod-definition
+            mountPath: /opt/pod-files
+        command:
+          - "/bin/bash"
+          - "-c"
+          - "/opt/pod-files/run_pod.sh"
+      restartPolicy: Never

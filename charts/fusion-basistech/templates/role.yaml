@@ -1,0 +1,41 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "fusion-basistech.roleName" . }}
+  namespace: {{ include "fusion-basistech.namespace" . }}
+  annotations:
+    {{- include "fusion-basistech.roleHookAnnotations" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - volumes
+      - persistentvolumeclaims
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+      - watch
+  - apiGroups:
+      - extensions
+    resources:
+      - deployments
+      - pods/log
+      - pods/status
+      - pods/var
+      - volumes
+    verbs:
+      - get
+      - list
+      - create
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+    verbs:
+      - get
+      - list
+      - create
