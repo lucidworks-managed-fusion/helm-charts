@@ -82,8 +82,8 @@ data:
         - ReadOnlyMany
       {{- if .Values.storageClassName }}
       storageClassName: {{ .Values.storageClassName }}
-      {{- else }}
-      storageClassName: manual
+      # {{- else }}
+      # storageClassName: manual
       {{- end }}
       resources:
         requests:
