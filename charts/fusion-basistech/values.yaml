@@ -13,6 +13,11 @@ serviceAccount: {}
 role: {}
 roleBinding: {}
 
+
+volumeSnapshot: 
+  driver: pd.csi.storage.gke.io
+  apiGroup: snapshot.storage.k8s.io
+
 forceDownload: false
 
 rex:

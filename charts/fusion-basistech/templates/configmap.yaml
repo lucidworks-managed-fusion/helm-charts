@@ -63,10 +63,31 @@ data:
             claimName: {{ include "fusion-basistech.persistentVolumeClaim" . }}
             readOnly: true
 
-  volume-pvc.yaml: |-
-  
-
   volume-snapshot.yaml: |-
+    apiVersion: snapshot.storage.k8s.io/v1
+    kind: VolumeSnapshotClass
+    metadata:
+      name: {{ include "fusion-basistech.volumeSnapshotClassName" . }}
+    {{- if .Values.volumeSnapshot.driver }}
+    driver: {{ .Values.volumeSnapshot.driver }}
+    {{- else }}
+    driver: pd.csi.storage.gke.io
+    {{- end }}
+    deletionPolicy: Delete
+    ---
+    apiVersion: snapshot.storage.k8s.io/v1
+    kind: VolumeSnapshot
+    metadata:
+      name: {{ include "fusion-basistech.volumeSnapshotName" . }}
+      namespace: {{ include "fusion-basistech.namespace" . }}
+      labels:
+        type: local
+          {{- include "fusion-basistech.labels" . | nindent 8 }}
+    spec:
+      volumeSnapshotClassName: {{ include "fusion-basistech.volumeSnapshotClassName" . }}
+      source:
+        persistentVolumeClaimName: {{ include "fusion-basistech.temporaryPersistentVolumeClaim" . }}
+    ---
     apiVersion: v1
     kind: PersistentVolumeClaim
     metadata:
@@ -78,8 +99,13 @@ data:
 
     spec:
       dataSource:
-        name: {{ include "fusion-basistech.temporaryPersistentVolumeClaim" . }}
-        kind: PersistentVolumeClaim
+        name: {{ include "fusion-basistech.volumeSnapshotName" . }}
+        kind: VolumeSnapshot
+        {{- if .Values.volumeSnapshot.apiGroup }}
+        apiGroup: {{ .Values.volumeSnapshot.apiGroup }}
+        {{- else }}
+        apiGroup: snapshot.storage.k8s.io
+        {{- end }}
       accessModes:
         - ReadOnlyMany
       {{- if .Values.storageClassName }}
