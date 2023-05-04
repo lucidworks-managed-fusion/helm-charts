@@ -21,6 +21,9 @@ data:
 
     {{- if not .Values.forceDownload }}
     if [[ ! -z $PVC_COUNT ]] ; then
+      kubectl apply -f /opt/pod-files/basistech_preparation.yaml
+      kubectl wait --for=condition=ready pod/{{ include "fusion-basistech.filesBuilder" . }} --timeout=-1s
+      kubectl logs --follow pod/{{ include "fusion-basistech.filesBuilder" . }}
       echo "VOLUME EXISTS"
       exit 0
     fi
@@ -105,6 +108,28 @@ data:
       resources:
         requests:
           storage: {{ .Values.storage }}  
+
+  basistech_preparation.yaml: |-
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: {{ include "fusion-basistech.filesBuilder" . }}
+      namespace: {{ include "fusion-basistech.namespace" . }}
+      annotations:
+        {{- include "fusion-basistech.preInstallAnnotations" . | nindent 6 }}
+    spec:
+      volumes:
+        - name: basistech
+          persistentVolumeClaim: 
+            claimName: {{ include "fusion-basistech.temporaryPersistentVolumeClaim" .}}
+      restartPolicy: OnFailure
+      containers:
+      - name: basistech-downloader
+        image: busybox:1.28
+        command: ['sh', '-c', 'echo The app is running! && sleep 5']
+        volumeMounts:
+        - name: basistech
+          mountPath: /rosette/server/roots
 
   basistech_builder.yaml: |-
     apiVersion: v1

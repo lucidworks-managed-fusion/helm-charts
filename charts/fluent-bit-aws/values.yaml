@@ -3,8 +3,8 @@ global:
 #   namespaceOverride:
 
 image:
-  repository: public.ecr.aws/aws-observability/fluent-bit-aws
-  tag: 2.21.5
+  repository: public.ecr.aws/aws-observability/aws-for-fluent-bit
+  tag: stable
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []

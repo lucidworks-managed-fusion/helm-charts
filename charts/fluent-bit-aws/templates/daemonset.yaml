@@ -38,17 +38,17 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           env:
             - name: AWS_REGION
-              value: {{ .Values.cloudwatch.region }}
+              value: "{{ .Values.cloudwatch.region }}"
             - name: CLUSTER_NAME
-              value: {{ .Values.cloudwatch.clusterName }}
+              value: "{{ .Values.cloudwatch.clusterName }}"
             - name: HTTP_SERVER
-              value: {{ .Values.service.http.server }}
+              value: "{{ .Values.service.http.server }}"
             - name: HTTP_PORT
-              value: {{ .Values.service.http.port }}
+              value: "{{ .Values.service.http.port }}"
             - name: READ_FROM_HEAD
-              value: {{ .Values.cloudwatch.readFrom.head }}
+              value: "{{ .Values.cloudwatch.readFrom.head }}"
             - name: READ_FROM_TAIL
-              value: {{ .Values.cloudwatch.readFrom.tail }}
+              value: "{{ .Values.cloudwatch.readFrom.tail }}"
             - name: HOST_NAME
               valueFrom:
                 fieldRef:
@@ -63,19 +63,19 @@ spec:
           {{- if .Values.env }}
             {{- toYaml .Values.env | nindent 12 }}
           {{- end }}
-          #   - name: fluentbit-config
-          #     mountPath: /fluent-bit/etc/
-            {{- if .Values.volumeMounts }}
           volumeMounts:
+            - name: fluent-bit-config
+              mountPath: /fluent-bit/etc/
+            {{- if .Values.volumeMounts }}
             {{- toYaml .Values.volumeMounts | nindent 12 }}
             {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-        # - name: fluentbit-config
-        #   configMap:
-        #     name: {{ include "fluent-bit-aws.fullname" . }}
-        {{- if .Values.volumes }}
       volumes:
+        - name: fluent-bit-config
+          configMap:
+            name: {{ include "fluent-bit-aws.fullname" . }}
+        {{- if .Values.volumes }}
         {{- toYaml .Values.volumes | nindent 8 }}
         {{- end}}
       {{- if .Values.tolerations }}
