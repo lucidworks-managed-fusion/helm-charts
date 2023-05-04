@@ -13,12 +13,32 @@ rules:
       - volumes
       - persistentvolumeclaims
       - volumesnapshots
+      - volumesnapshotclasses
+      - persistentvolumes
+      - events
     verbs:
       - get
       - list
       - create
       - delete
       - watch
+      - update
+      - patch
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources:
+      - volumesnapshotclasses
+      - volumesnapshotcontents
+      - volumesnapshotcontents/status
+      - volumesnapshots
+      - volumesnapshots/status
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+      - watch
+      - update
+      - patch
   - apiGroups:
       - extensions
     resources:

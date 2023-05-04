@@ -1,0 +1,13 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: {{ include "fusion-basistech.volumeSnapshotClassName" . }}
+  annotations: 
+    helm.sh/resource-policy: keep
+    {{- include "fusion-basistech.temporaryAnnotations" . | nindent 4 }} 
+{{- if .Values.volumeSnapshot.driver }}
+driver: {{ .Values.volumeSnapshot.driver }}
+{{- else }}
+driver: pd.csi.storage.gke.io
+{{- end }}
+deletionPolicy: Delete
