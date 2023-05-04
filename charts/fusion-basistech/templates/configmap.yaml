@@ -63,6 +63,8 @@ data:
             claimName: {{ include "fusion-basistech.persistentVolumeClaim" . }}
             readOnly: true
 
+  volume-pvc.yaml: |-
+  
 
   volume-snapshot.yaml: |-
     apiVersion: v1
@@ -82,8 +84,8 @@ data:
         - ReadOnlyMany
       {{- if .Values.storageClassName }}
       storageClassName: {{ .Values.storageClassName }}
-      # {{- else }}
-      # storageClassName: manual
+      {{- else }}
+      storageClassName: premium-rwo
       {{- end }}
       resources:
         requests:

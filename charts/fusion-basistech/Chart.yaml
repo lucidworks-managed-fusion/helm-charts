@@ -17,4 +17,4 @@ maintainers:
 name: fusion-basistech
 #sources:
 #- https://github.com/aws/eks-charts
-version: 0.0.2
+version: 0.0.3
