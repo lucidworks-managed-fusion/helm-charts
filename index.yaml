@@ -36,6 +36,27 @@ entries:
   fusion-basistech:
   - apiVersion: v1
     appVersion: 1.0.0
+    created: "2023-05-04T19:46:35.958323398Z"
+    description: A Helm chart to deploy basistech volumes
+    digest: 1cfb47b3853075ffc8bbeb5deb8ac68836b2fe626cda4498a2d7a764ed2c4edd
+    home: https://github.com/lucidworks-managed-fusion/helm-charts.git
+    keywords:
+    - fusion
+    - basistech
+    - solr
+    - rex
+    - rbl
+    - lucidworks
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion
+    name: fusion-basistech
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-basistech-0.0.3/fusion-basistech-0.0.3.tgz
+    version: 0.0.3
+  - apiVersion: v1
+    appVersion: 1.0.0
     created: "2023-04-26T21:02:58.618043164Z"
     description: A Helm chart to deploy basistech volumes
     digest: b11db8babb8b08f32358d6128f7e432de23f6692bbe20945a13dd2af8e993dbf
@@ -76,4 +97,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-basistech-0.0.1/fusion-basistech-0.0.1.tgz
     version: 0.0.1
-generated: "2023-04-26T21:02:58.618056664Z"
+generated: "2023-05-04T19:46:35.958344699Z"
