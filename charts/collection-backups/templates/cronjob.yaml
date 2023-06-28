@@ -1,0 +1,48 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ template "collection-backups.fullname" . }}
+  namespace: {{ template "collection-backups.namespace" . }}
+  labels:
+{{ include "collection-backups.labels" . | indent 4 }}
+{{- if .Values.labels }}
+{{ toYaml .Values.labels | indent 4 }}
+{{- end}}
+{{- if .Values.annotations }}
+  annotations:
+{{ toYaml .Values.annotations | indent 4 }}
+{{- end }}
+spec:
+  schedule: {{ .Values.schedule | default "0 0 * * *" | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: backup
+              image: gcr.io/managed-fusion/collection-backups:0.9.1
+              imagePullPolicy: Always
+              env:
+                - name: "BACKUP_ZK_URL"
+                  value: {{ template "collection-backups.zookeeperHost" . }}
+                - name: "BACKUP_REPO_NAME"
+                  value: gcs_backup
+                - name: "BACKUP_BUCKET_NAME"
+                  value: {{ required "A valid .Values.bucketName entry required!" .Values.bucketName }}
+                - name: "BACKUP_BUCKET_ROOT_FOLDER"
+                  value: environments
+                - name: "BACKUP_GCS_CREDENTIALS_PATH"
+                  value: /etc/gcs/cloud
+                - name: "BACKUP_CUSTOMER_ID"
+                  value: {{ template "collection-backups.customerId" . }}
+                - name: "BACKUP_EXCLUDED_COLLECTIONS"
+                  value: "system_logs"
+              volumeMounts:
+                - name: gcs-credentials
+                  mountPath: "/etc/gcs"
+                  readOnly: true
+          restartPolicy: OnFailure
+          volumes:
+            - name: gcs-credentials
+              secret:
+                secretName: {{ template "collection-backups.secretName" . }}

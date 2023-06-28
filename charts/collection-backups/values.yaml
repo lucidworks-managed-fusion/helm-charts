@@ -1,0 +1,12 @@
+schedule: "0 0 * * *"
+
+zookeeperHost:
+customerId:
+
+bucketName:
+
+secretName:
+secretCloud:
+
+annotations: {}
+labels: {}

@@ -1,0 +1,36 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: custom-solr-xml
+data:
+  solr.xml: |
+    <?xml version="1.0" encoding="UTF-8" ?>
+    <solr>
+        <str name="sharedLib">${solr.install.dir}/contrib/gcs-repository/lib,${solr.install.dir}/dist</str>
+        <solrcloud>
+            <str name="host">${host:}</str>
+            <int name="hostPort">${hostPort:80}</int>
+            <str name="hostContext">${hostContext:solr}</str>
+            <bool name="genericCoreNodeNames">${genericCoreNodeNames:true}</bool>
+            <int name="zkClientTimeout">${zkClientTimeout:30000}</int>
+            <int name="distribUpdateSoTimeout">${distribUpdateSoTimeout:600000}</int>
+            <int name="distribUpdateConnTimeout">${distribUpdateConnTimeout:60000}</int>
+            <str name="zkCredentialsProvider">${zkCredentialsProvider:org.apache.solr.common.cloud.DefaultZkCredentialsProvider}</str>
+            <str name="zkACLProvider">${zkACLProvider:org.apache.solr.common.cloud.DefaultZkACLProvider}</str>
+        </solrcloud>
+        <shardHandlerFactory name="shardHandlerFactory" class="HttpShardHandlerFactory">
+            <int name="socketTimeout">${socketTimeout:600000}</int>
+            <int name="connTimeout">${connTimeout:60000}</int>
+        </shardHandlerFactory>
+        <backup>
+            <repository name="gcs_backup" class="org.apache.solr.gcs.GCSBackupRepository" default="false">
+                <str name="gcsBucket">{{ .Values.bucketName }}</str>
+                <str name="gcsCredentialPath">/etc/gcs/cloud</str>
+                <str name="location">environments</str>
+                <int name="gcsClientMaxRetries">5</int>
+                <int name="gcsClientHttpInitialHttpDelayMillis">1500</int>
+                <double name="gcsClientHttpRetryDelayMultiplier">1.5</double>
+                <int name="gcsClientMaxHttpRetryDelayMillis">10000</int>
+            </repository>
+        </backup>
+    </solr>
