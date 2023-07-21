@@ -11,3 +11,8 @@ secretCloud:
 annotations: {}
 labels: {}
 imagePullSecrets: []
+image:
+  repository: gcr.io/managed-fusion
+  name: collection-backups
+  tag: 0.9.1
+  pullPolicy: IfNotPresent
