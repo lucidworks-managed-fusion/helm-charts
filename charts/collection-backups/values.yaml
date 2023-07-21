@@ -10,3 +10,4 @@ secretCloud:
 
 annotations: {}
 labels: {}
+imagePullSecrets: []

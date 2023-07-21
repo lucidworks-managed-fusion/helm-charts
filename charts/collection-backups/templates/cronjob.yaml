@@ -18,6 +18,10 @@ spec:
     spec:
       template:
         spec:
+{{-  if .Values.imagePullSecrets }}
+          imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 12 }}
+{{- end }}
           containers:
             - name: backup
               image: gcr.io/managed-fusion/collection-backups:0.9.1
