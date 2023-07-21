@@ -18,10 +18,14 @@ spec:
     spec:
       template:
         spec:
+{{-  if .Values.imagePullSecrets }}
+          imagePullSecrets:
+{{ toYaml .Values.imagePullSecrets | indent 12 }}
+{{- end }}
           containers:
             - name: backup
-              image: gcr.io/managed-fusion/collection-backups:0.9.1
-              imagePullPolicy: Always
+              image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
               env:
                 - name: "BACKUP_ZK_URL"
                   value: {{ template "collection-backups.zookeeperHost" . }}

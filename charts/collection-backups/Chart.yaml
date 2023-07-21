@@ -11,8 +11,8 @@ keywords:
 maintainers:
   - email: irepan.chavez@lucidworks.com
     name: Irepan Chavez
-    url: https://github.com/lucidworks-managed-fusion
+    url: https://github.com/lucidworks-managed-fusion/helm-charts
 name: collection-backups
-#sources:
-#- https://github.com/aws/eks-charts
-version: 0.0.1
+sources:
+  - https://github.com/lucidworks-managed-fusion/helm-charts.git
+version: 0.0.2
