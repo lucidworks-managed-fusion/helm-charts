@@ -8,6 +8,8 @@ bucketName:
 secretName:
 secretCloud:
 
+nodeSelector: {}
+securityContext: {}
 annotations: {}
 labels: {}
 imagePullSecrets: []
