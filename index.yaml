@@ -3,6 +3,28 @@ entries:
   collection-backups:
   - apiVersion: v1
     appVersion: 1.0.0
+    created: "2023-07-25T17:32:41.275583244Z"
+    description: A Helm chart to deploy fusion collection backups
+    digest: 35b5e57d0b6b17efb738029970534510d9b341e3238acf826095ed9e027ec6f0
+    home: https://github.com/lucidworks-managed-fusion/collection-backups.git
+    keywords:
+    - fusion
+    - collections
+    - solr
+    - lucidworks
+    - collection
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: collection-backups
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/collection-backups-0.0.3/collection-backups-0.0.3.tgz
+    version: 0.0.3
+  - apiVersion: v1
+    appVersion: 1.0.0
     created: "2023-07-21T17:50:11.394420344Z"
     description: A Helm chart to deploy fusion collection backups
     digest: 561c5e0c89f07aaa26a4338c1952bcc0b122c3b9a7e6da20321597ba7df29071
@@ -211,4 +233,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-basistech-0.0.1/fusion-basistech-0.0.1.tgz
     version: 0.0.1
-generated: "2023-07-21T17:50:11.394439544Z"
+generated: "2023-07-25T17:32:41.275610845Z"
