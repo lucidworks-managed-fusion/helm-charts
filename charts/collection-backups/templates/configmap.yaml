@@ -6,10 +6,13 @@ data:
   solr.xml: |
     <?xml version="1.0" encoding="UTF-8" ?>
     <solr>
-        <str name="sharedLib">${solr.install.dir}/contrib/gcs-repository/lib,${solr.install.dir}/dist</str>
+        <int name="maxBooleanClauses">${solr.max.booleanClauses:1024}</int>
+        <str name="sharedLib">${solr.install.dir}/contrib/gcs-repository/lib,${solr.install.dir}/dist,${solr.sharedLib:}</str>
+        <str name="allowPaths">${solr.allowPaths:}</str>
+
         <solrcloud>
             <str name="host">${host:}</str>
-            <int name="hostPort">${hostPort:80}</int>
+            <int name="hostPort">${solr.port.advertise:0}</int>
             <str name="hostContext">${hostContext:solr}</str>
             <bool name="genericCoreNodeNames">${genericCoreNodeNames:true}</bool>
             <int name="zkClientTimeout">${zkClientTimeout:30000}</int>
@@ -18,10 +21,15 @@ data:
             <str name="zkCredentialsProvider">${zkCredentialsProvider:org.apache.solr.common.cloud.DefaultZkCredentialsProvider}</str>
             <str name="zkACLProvider">${zkACLProvider:org.apache.solr.common.cloud.DefaultZkACLProvider}</str>
         </solrcloud>
+
         <shardHandlerFactory name="shardHandlerFactory" class="HttpShardHandlerFactory">
             <int name="socketTimeout">${socketTimeout:600000}</int>
             <int name="connTimeout">${connTimeout:60000}</int>
+            <str name="shardsWhitelist">${solr.shardsWhitelist:}</str>
         </shardHandlerFactory>
+
+        <metrics enabled="${metricsEnabled:true}"/>
+
         <backup>
             <repository name="gcs_backup" class="org.apache.solr.gcs.GCSBackupRepository" default="false">
                 <str name="gcsBucket">{{ .Values.bucketName }}</str>
