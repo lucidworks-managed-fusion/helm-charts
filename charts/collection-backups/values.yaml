@@ -13,6 +13,11 @@ securityContext: {}
 annotations: {}
 labels: {}
 imagePullSecrets: []
+
+solrXml:
+  version: 1
+  xmlFile: ""
+
 image:
   repository: gcr.io/managed-fusion
   name: collection-backups

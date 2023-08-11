@@ -4,32 +4,34 @@ metadata:
   name: {{ template "collection-backups.fullname" . }}
   namespace: {{ template "collection-backups.namespace" . }}
   labels:
-{{ include "collection-backups.labels" . | indent 4 }}
-{{- if .Values.labels }}
-{{ toYaml .Values.labels | indent 4 }}
-{{- end}}
-{{- if .Values.annotations }}
+    {{- include "collection-backups.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+  {{- with .Values.annotations }}
   annotations:
-{{ toYaml .Values.annotations | indent 4 }}
-{{- end }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   schedule: {{ .Values.schedule | default "0 0 * * *" | quote }}
   jobTemplate:
     spec:
       template:
+        metadata:
+          labels:
+            {{- include "collection-backups.labels" . | nindent 12 }}
         spec:
-{{- if .Values.securityContext }}
           securityContext:
-{{- .Values.securityContext | toYaml | nindent 12 }}
-{{- end }}
-{{- if .Values.nodeSelector }}
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.nodeSelector }}
           nodeSelector:
-{{ toYaml .Values.nodeSelector | nindent 12 }}
-{{- end }}
-{{-  if .Values.imagePullSecrets }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.imagePullSecrets }}
           imagePullSecrets:
-{{ toYaml .Values.imagePullSecrets | indent 12 }}
-{{- end }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           containers:
             - name: backup
               image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
