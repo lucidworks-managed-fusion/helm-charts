@@ -255,4 +255,27 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-basistech-0.0.1/fusion-basistech-0.0.1.tgz
     version: 0.0.1
-generated: "2023-08-02T22:39:47.581959835Z"
+  spark-pod-cleaner:
+  - apiVersion: v2
+    appVersion: 1.27.4
+    created: "2023-08-11T16:10:23.085401706Z"
+    description: A Helm chart for Kubernetes
+    digest: 3ddbbd89dc52826877d20a3fb24e45c1393bdcc62cf0224e9717c87b7e05fa01
+    home: https://github.com/lucidworks-managed-fusion/spark-pod-cleaner.git
+    keywords:
+    - fusion
+    - pod
+    - cleaner
+    - lucidworks
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: spark-pod-cleaner
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    type: application
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/spark-pod-cleaner-0.1.0/spark-pod-cleaner-0.1.0.tgz
+    version: 0.1.0
+generated: "2023-08-11T16:10:23.085432108Z"
