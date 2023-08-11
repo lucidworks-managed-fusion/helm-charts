@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ template "spark-pod-cleaner.fullname" . }}
+  namespace: {{ template "spark-pod-cleaner.namespace" . }}
+  labels:
+    {{- include "spark-pod-cleaner.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: {{ .Values.schedule | default "*/5 * * * *" | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "spark-pod-cleaner.labels" . | nindent 12 }}
+        spec:
+          serviceAccountName:  {{ template "spark-pod-cleaner.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ .Chart.Name }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              volumeMounts:
+                - name: pod-definition
+                  mountPath: /opt/pod-files
+              command:
+                - "/bin/bash"
+                - "-c"
+                - "/opt/pod-files/clean_pods.sh"
+          restartPolicy: OnFailure
+          volumes:
+            - name: pod-definition
+              configMap:
+                name: {{ include "spark-pod-cleaner.fullname" . }}
+                defaultMode: 0555
