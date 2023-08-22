@@ -40,7 +40,7 @@ Create a fully uqalified Host name for zookeeper
 {{- .Values.zookeeperHost | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name "zookeeper" -}}
-{{- printf "%s-%s-headless.%s:2181" .Release.Name $name .Release.Name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-headless.%s:2181" .Release.Name $name .Release.Namespace | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 
