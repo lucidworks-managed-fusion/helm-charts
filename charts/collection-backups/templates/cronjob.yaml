@@ -51,6 +51,8 @@ spec:
                   value: {{ template "collection-backups.customerId" . }}
                 - name: "BACKUP_EXCLUDED_COLLECTIONS"
                   value: "system_logs"
+                - name: "BACKUP_MAX_BACKUP_POINTS"
+                  value: {{ quote .Values.maxBackupPoints }}
               volumeMounts:
                 - name: gcs-credentials
                   mountPath: "/etc/gcs"
