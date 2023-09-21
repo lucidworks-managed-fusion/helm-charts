@@ -2,6 +2,7 @@ schedule: "0 0 * * *"
 
 zookeeperHost:
 customerId:
+maxBackupPoints: 400
 
 bucketName:
 
