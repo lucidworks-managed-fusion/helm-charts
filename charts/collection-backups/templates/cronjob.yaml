@@ -15,8 +15,10 @@ metadata:
   {{- end }}
 spec:
   schedule: {{ .Values.schedule | default "0 0 * * *" | quote }}
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
+      backoffLimit: 3
       template:
         metadata:
           labels:
