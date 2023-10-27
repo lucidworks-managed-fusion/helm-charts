@@ -5,6 +5,7 @@ customerId:
 maxBackupPoints: 400
 
 bucketName:
+excludedCollections: "system_logs"
 
 secretName:
 secretCloud:
