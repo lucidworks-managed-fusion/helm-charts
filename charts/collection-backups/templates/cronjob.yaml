@@ -52,7 +52,7 @@ spec:
                 - name: "BACKUP_CUSTOMER_ID"
                   value: {{ template "collection-backups.customerId" . }}
                 - name: "BACKUP_EXCLUDED_COLLECTIONS"
-                  value: "system_logs"
+                  value: {{ required "A valid .Values.excludedCollections entry required!" .Values.excludedCollections }}
                 - name: "BACKUP_MAX_BACKUP_POINTS"
                   value: {{ quote .Values.maxBackupPoints }}
               volumeMounts:
