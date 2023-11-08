@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "collection-backups.fullname" . }}-api-service
+  namespace: {{ template "collection-backups.namespace" . }}
+spec:
+  selector:
+    {{- include "collection-backups.labels" . | nindent 4 }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
