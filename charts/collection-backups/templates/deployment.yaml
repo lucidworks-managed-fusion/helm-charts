@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "collection-backups.fullname" . }}
+  namespace: {{ template "collection-backups.namespace" . }}
+  labels:
+    {{- include "collection-backups.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "collection-backups.labels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "collection-backups.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: backup
+          image: {{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: BACKUP_ZK_URL
+              value: {{ template "collection-backups.zookeeperHost" . }}
+            - name: BACKUP_REPO_NAME
+              value: gcs_backup
+            - name: BACKUP_BUCKET_NAME
+              value: {{ required "A valid .Values.bucketName entry required!" .Values.bucketName }}
+            - name: BACKUP_BUCKET_ROOT_FOLDER
+              value: environments
+            - name: BACKUP_GCS_CREDENTIALS_PATH
+              value: /etc/gcs/cloud
+            - name: BACKUP_CUSTOMER_ID
+              value: {{ template "collection-backups.customerId" . }}
+            - name: BACKUP_CRON_EXPRESSION
+              value: {{ .Values.schedule | default "0 0 * * * *" | quote }}
+            - name: BACKUP_EXCLUDED_COLLECTIONS
+              value: {{ required "A valid .Values.excludedCollections entry required!" .Values.excludedCollections }}
+            - name: BACKUP_MAX_BACKUP_POINTS
+              value: {{ quote .Values.maxBackupPoints }}
+          volumeMounts:
+            - name: gcs-credentials
+              mountPath: "/etc/gcs"
+              readOnly: true
+      volumes:
+        - name: gcs-credentials
+          secret:
+            secretName: collection-backup-sa
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: collection-backups-service
+spec:
+  selector:
+    app: collection-backups
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
