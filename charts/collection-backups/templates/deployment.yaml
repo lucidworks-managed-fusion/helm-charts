@@ -25,7 +25,7 @@ spec:
     spec:
       containers:
         - name: backup
-          image: {{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
             - name: BACKUP_ZK_URL
@@ -54,16 +54,3 @@ spec:
         - name: gcs-credentials
           secret:
             secretName: collection-backup-sa
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: collection-backups-service
-spec:
-  selector:
-    app: collection-backups
-  ports:
-    - name: http
-      protocol: TCP
-      port: 8080
-      targetPort: 8080
