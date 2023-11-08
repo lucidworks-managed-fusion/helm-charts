@@ -2,6 +2,31 @@ apiVersion: v1
 entries:
   collection-backups:
   - apiVersion: v1
+    appVersion: 1.1.0
+    created: "2023-11-08T13:48:28.046033691Z"
+    description: A Helm chart to deploy fusion collection backups
+    digest: d4b1fba2f8c8c3aed01acba834de5b894b8d703a4bc335ba6e79fa977403674d
+    home: https://github.com/lucidworks-managed-fusion/collection-backups.git
+    keywords:
+    - fusion
+    - collections
+    - solr
+    - lucidworks
+    - collection
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    - email: derek.adams@lucidworks.com
+      name: Derek Adams
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: collection-backups
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/collection-backups-0.2.0/collection-backups-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v1
     appVersion: 1.0.0
     created: "2023-10-27T19:02:04.413547119Z"
     description: A Helm chart to deploy fusion collection backups
@@ -410,4 +435,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/spark-pod-cleaner-0.1.0/spark-pod-cleaner-0.1.0.tgz
     version: 0.1.0
-generated: "2023-10-27T19:02:04.413643624Z"
+generated: "2023-11-08T13:48:28.046199792Z"
