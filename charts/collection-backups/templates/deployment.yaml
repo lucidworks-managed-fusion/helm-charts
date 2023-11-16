@@ -24,14 +24,14 @@ spec:
         {{- include "collection-backups.labels" . | nindent 8 }}
     spec:
       securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- toYaml .Values.securityContext | nindent 8 }}
           {{- with .Values.nodeSelector }}
       nodeSelector:
-            {{- toYaml . | nindent 12 }}
+          {{- toYaml . | nindent 8 }}
           {{- end }}
           {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
-            {{- toYaml . | nindent 12 }}
+            {{- toYaml . | nindent 8 }}
           {{- end }}
       containers:
         - name: backup
