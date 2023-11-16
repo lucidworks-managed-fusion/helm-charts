@@ -23,6 +23,16 @@ spec:
       labels:
         {{- include "collection-backups.labels" . | nindent 8 }}
     spec:
+      securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- with .Values.nodeSelector }}
+      nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
       containers:
         - name: backup
           image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
