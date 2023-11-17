@@ -3,6 +3,10 @@ kind: Service
 metadata:
   name: {{ template "collection-backups.fullname" . }}-api-service
   namespace: {{ template "collection-backups.namespace" . }}
+  annotations:
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "8080"
+    prometheus.io/scrape: "true"
 spec:
   selector:
     {{- include "collection-backups.labels" . | nindent 4 }}
