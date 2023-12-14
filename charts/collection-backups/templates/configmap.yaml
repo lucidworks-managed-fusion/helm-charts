@@ -9,6 +9,7 @@ data:
   {{- else if eq .Values.solrXml.version 1.0 }}
     <?xml version="1.0" encoding="UTF-8" ?>
     <solr>
+      <int name="maxBooleanClauses">${solr.max.booleanClauses:4096}</int>
       <str name="sharedLib">${solr.install.dir}/contrib/gcs-repository/lib,${solr.install.dir}/dist</str>
       <solrcloud>
         <str name="host">${host:}</str>
