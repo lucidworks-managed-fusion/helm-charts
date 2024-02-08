@@ -1,0 +1,50 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "status-reader.roleName" . }}
+  namespace: {{ include "status-reader.namespace" . }}
+  labels:
+    {{- include "status-reader.labels" . | nindent 4 }}
+rules:
+  - apiGroups: [""]
+    resources:
+      - pods/exec
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - solrclouds
+      - replicationcontrollers
+      - persistentvolumes
+      - persistentvolumeclaims
+      - cronjobs
+      - services
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - apps
+      - autoscaling
+      - solr.lucidworks.com
+      - solr.apache.org
+      - batch
+    resources:
+      - deployments
+      - statefulsets
+      - replicasets
+      - daemonsets
+      - solrscalings
+      - solrclouds
+      - jobs
+      - horizontalpodautoscalers
+      - cronjobs
+    verbs:
+      - get
+      - list

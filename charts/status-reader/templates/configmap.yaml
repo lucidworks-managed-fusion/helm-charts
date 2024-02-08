@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "status-reader.fullname" . }}
+  namespace: {{ include "status-reader.namespace" . }}
+data:
+  snapshot.sh: |-
+    #!/bin/bash
+
+    # This script takes a "snapshot" of the current cluster state and records
+    # detailed information about the nodes, pods, it also collects operator logs
+    # and the current Solr cluster state.
+
+
+    export SCRIPT_NAME=$(basename $0)
+    if [ -z $BASE_DIR ] ; then
+      export BASE_DIR=$(cd `dirname $0` ; pwd)
+    fi
+    export CURR_DIR=$(pwd)
+    export SCRIPTS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+
+    function usage() {
+      echo "
+      Usage: $0 <NAMESPACE> [OPTIONS]
+      "
+      exit 0
+    }
+
+    export SOLR_LOGS="true"
+
+    if [ $# -eq 0 ] ; then
+      usage
+    fi
+
+    #set -x
+
+    NAMESPACE=$1
+
+    SNAPSHOT_DIR="snapshot_`TZ=UTC date '+%Y-%m-%d_%H-%M-%S'`"
+
+    DIR="/results/${SNAPSHOT_DIR}"
+
+    mkdir -p $DIR
+    echo "Collecting operator logs..."
+    kubectl logs -l app=solr-autoscaling-operator --tail=-1 --timestamps=true --prefix=true -n $NAMESPACE > $DIR/autoscaling-operator.log
+    kubectl logs -l control-plane=solr-operator --tail=-1 --timestamps=true --prefix=true -n $NAMESPACE > $DIR/solr-operator.log
+    echo "Collecting pod logs..."
+    kubectl get pods -o=custom-columns=NAME:.metadata.name,STATUS:.status.phase,READY:.status.containerStatuses[0].ready,RESTARTS:.status.containerStatuses[0].restartCount,NODE:.spec.nodeName -n $NAMESPACE > $DIR/pods.log
+    kubectl describe pods -n $NAMESPACE > $DIR/pods-descr.log
+    echo "Collecting node / SolrCloud / SolrScaling information..."
+    kubectl get nodes -L type,topology.kubernetes.io/zone > $DIR/nodes.log
+    kubectl get nodes -o yaml > $DIR/nodes.yaml
+    kubectl get solrclouds -o yaml -n $NAMESPACE > $DIR/solrclouds.yaml
+    kubectl get solrscalings -o yaml -n $NAMESPACE > $DIR/solrscalings.yaml
+    kubectl get all -o yaml -n $NAMESPACE > $DIR/cluster.yaml
+
+    echo "Collecting PV / PVC / HPA / ConfigMap information..."
+    kubectl get pvc -o yaml -n $NAMESPACE > $DIR/pvcs.yaml
+    kubectl get pv -o yaml -n $NAMESPACE > $DIR/pvs.yaml
+
+    kubectl get hpa -o yaml -n $NAMESPACE > $DIR/hpas.yaml
+    kubectl get configmaps -o yaml -n $NAMESPACE > $DIR/configmaps.yaml
+
+    echo "Collecting Solr CLUSTERSTATUS..."
+    kubectl exec internal-standard-solrcloud-0 -c solrcloud-node -- /usr/bin/curl -s 'http://localhost:8983/solr/admin/collections?action=CLUSTERSTATUS' -n $NAMESPACE > $DIR/solr_clusterstatus.json
+
+    echo "Collecting Overseer logs..."
+    kubectl exec internal-standard-solrcloud-0 -c solrcloud-node -- /usr/bin/curl -s 'http://localhost:8983/solr/admin/collections?action=OVERSEERSTATUS' -n $NAMESPACE > $DIR/solr_overseerstatus.json
+    OVERSEER=`cat $DIR/solr_overseerstatus.json | jq -r '.leader' | cut -f 1 -d .`
+    kubectl logs $OVERSEER --tail=-1 > $DIR/solr_overseer.log
+
+    cd $(dirname $DIR)
+
+    export FILE_NAME="${SNAPSHOT_DIR}.zip"
+    # tar cfz ${FILE_NAME} ${SNAPSHOT_DIR}
+    zip -r -9 ${FILE_NAME} $SNAPSHOT_DIR
+    rm -r $SNAPSHOT_DIR
+
+    if [ ! -f ${GOOGLE_APPLICATION_CREDENTIALS} ] ; then
+      echo ${GOOGLE_APPLICATION_CREDENTIALS}
+      echo "No GOOGLE_APPLICATION_CREDENTIALS set, skipping upload to GCS"
+    elif [ ! -z $GCS_BUCKET ] ; then
+      echo "Uploading to GCS..."
+      gsutil cp ${FILE_NAME} gs://$GCS_BUCKET/
+    fi
+
+    if [ ! -f ${AWS_CREDENTIALS} ] ; then
+      echo ${AWS_CREDENTIALS}
+      echo "No AWS_CREDENTIALS set, skipping upload to S3"
+    elif [ ! -z $S3_BUCKET ] ; then
+      echo "Uploading to S3..."
+      aws s3 cp ${FILE_NAME}  s3://$S3_BUCKET/
+    fi
+
+    rm -f ${FILE_NAME}

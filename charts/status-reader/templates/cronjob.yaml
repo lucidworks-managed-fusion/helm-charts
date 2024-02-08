@@ -1,0 +1,66 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ template "status-reader.fullname" . }}
+  namespace: {{ template "status-reader.namespace" . }}
+  labels:
+    {{- include "status-reader.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: {{ .Values.schedule | default "0 * * * *" | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "status-reader.labels" . | nindent 12 }}
+        spec:
+          serviceAccountName:  {{ template "status-reader.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ .Chart.Name }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+                - name: GCS_BUCKET
+                  value: {{ .Values.bucket.name }}
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: /root/.gcp/cloud
+              volumeMounts:
+                - name: pod-definition
+                  mountPath: /opt/pod-files
+                - name: results-volume
+                  mountPath: /results
+                - name: gcs-credentials
+                  mountPath: /root/.gcp
+              command:
+                - "/bin/bash"
+                - "-c"
+                - "/usr/local/bin/sdk_setup.sh /opt/pod-files/snapshot.sh {{ template "status-reader.namespace" . }}"
+          restartPolicy: OnFailure
+          volumes:
+            - name: gcs-credentials
+              secret:
+                secretName: {{ .Values.bucket.gcsCredentialsSecret }}
+            - name: pod-definition
+              configMap:
+                name: {{ include "status-reader.fullname" . }}
+                defaultMode: 0555
+            - name: results-volume
+              emptyDir: {}
