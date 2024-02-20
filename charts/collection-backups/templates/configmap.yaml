@@ -68,7 +68,7 @@ data:
       <backup>
         <repository name="gcs_backup" class="org.apache.solr.gcs.GCSBackupRepository" default="false">
           <str name="gcsBucket">{{ .Values.bucketName }}</str>
-          <str name="gcsCredentialPath">{{ .Values.gcsMountPath | default "/etc/gcs" }}/gcs/cloud</str>
+          <str name="gcsCredentialPath">{{ .Values.gcsMountPath | default "/etc/gcs" }}/cloud</str>
           <str name="location">environments</str>
           <int name="gcsClientMaxRetries">5</int>
           <int name="gcsClientHttpInitialHttpDelayMillis">1500</int>
