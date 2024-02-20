@@ -5,6 +5,7 @@ customerId:
 maxBackupPoints: 400
 
 bucketName:
+gcsMountPath: "/etc/gcs"
 excludedCollections: "system_logs"
 
 secretName:
