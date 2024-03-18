@@ -612,6 +612,24 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-basistech-0.0.1/fusion-basistech-0.0.1.tgz
     version: 0.0.1
+  solr-autoscaling-operator:
+  - apiVersion: v2
+    appVersion: "1"
+    created: "2024-03-18T08:38:05.943771127Z"
+    description: The Solr Autoscaling Operator enables easy management of Solr replicas
+      within Kubernetes.
+    digest: 181b3b7f739ceeb9ce47f92f5105b39325d675e926b860040d4fea1b4cc1b36a
+    keywords:
+    - solr
+    - autoscaling
+    - operator
+    maintainers:
+    - email: ab@lucidworks.com
+      name: Andrzej Bialecki
+    name: solr-autoscaling-operator
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/solr-autoscaling-operator-1.3.0-m.4/solr-autoscaling-operator-1.3.0-m.4.tgz
+    version: 1.3.0-m.4
   spark-pod-cleaner:
   - apiVersion: v2
     appVersion: 1.27.4
@@ -659,4 +677,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2024-02-20T20:43:04.304517158Z"
+generated: "2024-03-18T08:38:05.943902163Z"
