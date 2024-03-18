@@ -1,0 +1,96 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "solr-autoscaling-operator.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: solr-autoscaling-operator
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: solr-autoscaling-operator
+  template:
+    metadata:
+      annotations:
+        {{- if .Values.annotations }}
+        {{ toYaml .Values.annotations | nindent 8 }}
+        {{- end }}
+      labels:
+        app: solr-autoscaling-operator
+        {{- if .Values.labels }}
+        {{ toYaml .Values.labels | nindent 8 }}
+        {{- end }}
+    # TODO SSL, securityContext?
+    spec:
+    {{- if .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml .Values.imagePullSecrets | nindent 8 }}
+    {{- end }}
+      serviceAccountName: {{ include "solr-autoscaling-operator.serviceAccount" . }}
+      containers:
+        - name: operator
+          image: {{ .Values.image.repository}}/{{ .Values.image.name }}:{{ .Values.image.tag }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.port }}
+              name: http
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 60
+            timeoutSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /readiness
+              port: 8080
+            initialDelaySeconds: 60
+            timeoutSeconds: 30
+            failureThreshold: 3
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          env:
+            - name: SERVICE_ACCOUNT
+              value: {{ include "solr-autoscaling-operator.serviceAccount" . }}
+          {{- if .Values.env }}
+          {{- toYaml .Values.env | nindent 12 }}
+          {{- end }}
+          {{- if .Values.args }}
+          args:
+          {{- toYaml .Values.args | nindent 10 }}
+          {{- end }}
+          {{- if .Values.heapDumps }}
+          volumeMounts:
+            - mountPath: "/mnt/heapdumps"
+              name: dump-volume
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  - sh
+                  - -c
+                  - "jmap -dump:live,format=b,file=/mnt/heapdumps/$(hostname).hprof 1"
+          {{- end }}
+      {{- if .Values.nodeSelector }}
+      nodeSelector:
+        {{ toYaml .Values.nodeSelector | nindent 8 }}
+      {{- end }}
+      {{- if .Values.affinity }}
+      affinity:
+        {{ toYaml .Values.affinity | nindent 8 }}
+      {{- end }}
+      {{- if .Values.tolerations }}
+      tolerations:
+        {{ toYaml .Values.tolerations | nindent 8 }}
+      {{- end }}
+      {{- if .Values.heapDumps }}
+      volumes:
+        - name: dump-volume
+          persistentVolumeClaim:
+            claimName: heapdumps-disk
+      {{- end }}
