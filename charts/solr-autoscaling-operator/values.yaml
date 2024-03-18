@@ -1,0 +1,39 @@
+port: 8080
+
+fullnameOverride: ""
+nameOverride: ""
+serviceAccount: ""
+
+# Uncomment to automatically produce heap dumps on operator restart (or kill).
+# Heap dumps will be created on PVC named `heapdumps-disk`.
+#heapDumps: "10Gi"
+
+global: {}
+
+
+image:
+  repository: "gcr.io/solr-dev"
+  name: solr-autoscaling-operator
+  tag: latest
+  pullPolicy: IfNotPresent
+
+imagePullSecrets:
+  - name: secretName
+
+# Various Pod Options to customize the runtime of the operator
+annotations: {}
+labels: {}
+
+env: []
+
+args: []
+nodeSelector: {}
+affinity: {}
+tolerations: []
+resources:
+  limits:
+    cpu: 750m
+    memory: 6Gi
+  requests:
+    cpu: 750m
+    memory: 6Gi

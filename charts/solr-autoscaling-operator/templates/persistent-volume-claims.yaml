@@ -1,0 +1,12 @@
+{{- if .Values.heapDumps }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: heapdumps-disk
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.heapDumps }}
+{{- end }}

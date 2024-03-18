@@ -1,0 +1,12 @@
+apiVersion: v2
+name: "solr-autoscaling-operator"
+version: "1.3.0-m.4"
+appVersion: "1"
+description: The Solr Autoscaling Operator enables easy management of Solr replicas within Kubernetes.
+keywords:
+  - solr
+  - autoscaling
+  - operator
+maintainers:
+  - name: "Andrzej Bialecki"
+    email: "ab@lucidworks.com"

@@ -1,0 +1,186 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  # name must match the spec fields below, and be in the form: <plural>.<group>
+  name: solrscalings.solr.lucidworks.com
+spec:
+  # group name to use for REST API: /apis/<group>/<version>
+  group: solr.lucidworks.com
+  # list of versions supported by this CustomResourceDefinition
+  versions:
+    - name: v1
+      # Each version can be enabled/disabled by Served flag.
+      served: true
+      # One and only one version must be marked as the storage version.
+      storage: true
+      # subresources describes the subresources for custom resources.
+      subresources:
+        status: { }
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: ["rules"]
+              properties:
+                # replica placement rules
+                rules:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      # collection name or DEFAULT
+                      collection:
+                        type: string
+                      # replication type specs, one per replicaType
+                      replicationTypes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            # replica type (one of nrt, tlog or pull)
+                            replicaType:
+                              type: string
+#                              enum:
+#                                - nrt
+#                                - tlog
+#                                - pull
+                            # node type (one of standard, search, analytics)
+                            nodeType:
+                              type: string
+#                              enum:
+#                                - standard
+#                                - search
+#                                - analytics
+                            # placement strategy symbolic name and params
+                            placementStrategy:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                count:
+                                  type: integer
+                                percentage:
+                                  type: integer
+                                params:
+                                  type: object
+                                  x-kubernetes-preserve-unknown-fields: true
+                # (optional) SolrCloud cluster to use
+                zookeeperRef:
+                  type: object
+                  required: ["zkHost"]
+                  properties:
+                    # ZK host string (host1,host2,host3)
+                    zkHost:
+                      type: string
+                    zkChroot:
+                      type: string
+                      default: "/solr"
+                # (optional) Backup configuration
+                solrBackup:
+                  type: object
+                  properties:
+                    configuration:
+                      type: object
+                      properties:
+                        pvc:
+                          type: object
+                          required: ["name"]
+                          properties:
+                            name:
+                              type: string
+                        gcs:
+                          type: object
+                          required: ["bucket", "secretName", "secretKey"]
+                          properties:
+                            bucket:
+                              type: string
+                            secretName:
+                              type: string
+                            secretKey:
+                              type: string
+                            baseLocation:
+                              type: string
+                    configs:
+                      type: array
+                      items:
+                        type: object
+                        required: ["collections", "schedule", "maxSaved"]
+                        properties:
+                          collections:
+                            type: string
+                          schedule:
+                            type: string
+                          maxSaved:
+                            type: integer
+                solrCluster:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    properties:
+                      config:
+                        type: string
+                      hpa:
+                        type: string
+                    required: ["config", "hpa"]
+            status:
+              type: object
+              properties:
+                # base name of the SolrCloud clusters used by this resource
+                solrCloud:
+                  type: string
+                generation:
+                  type: integer
+                reconcileStatus:
+                  type: object
+                  properties:
+                    state:
+                      type: string
+                    time:
+                      type: string
+                    error:
+                      type: string
+                    errorDetails:
+                      type: string
+                    retryCount:
+                      type: integer
+                    actions:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          action:
+                            type: string
+                          start:
+                            type: string
+      additionalPrinterColumns:
+        - name: solrcloud
+          type: string
+          description: name of the SolrCloud cluster
+          jsonPath: .status.solrCloud
+        - name: reconcileStatus
+          type: string
+          description: status of the latest reconcile
+          jsonPath: .status.reconcileStatus.state
+        - name: error
+          type: string
+          description: error
+          jsonPath: .status.reconcileStatus.error
+  scope: Namespaced
+  names:
+    # plural name to be used in the URL: /apis/<group>/<version>/<plural>
+    plural: solrscalings
+    # singular name to be used as an alias on the CLI and for display
+    singular: solrscaling
+    # kind is normally the CamelCased singular type. Your resource manifests use this.
+    kind: SolrScaling
+    # shortNames allow shorter string to match your resource on the CLI
+    shortNames:
+      - sscal
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
