@@ -5,9 +5,7 @@ metadata:
   labels:
     {{- include "prom-exporter.labels" . | nindent 4 }}
 spec:
-  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
-  {{- end }}
   selector:
     matchLabels:
       {{- include "prom-exporter.selectorLabels" . | nindent 6 }}
