@@ -1,0 +1,14 @@
+apiVersion: v1
+appVersion: 1.0.0
+description: A Helm chart to deploy Bouncer
+home: https://github.com/lucidworks-managed-fusion/cloud-engineering-tooling
+keywords:
+  - bouncer
+maintainers:
+  - email: randy.gettman@lucidworks.com
+    name: Randy Gettman
+    url: https://github.com/lucidworks-managed-fusion/helm-charts
+name: bouncer
+sources:
+  - https://github.com/lucidworks-managed-fusion/helm-charts.git
+version: 1.0.0
