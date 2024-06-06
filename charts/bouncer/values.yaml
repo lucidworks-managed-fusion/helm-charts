@@ -1,0 +1,15 @@
+cronjob:
+  schedule: "0 0 * * *"
+  customerId: "test"
+  retries:
+    number: "12"
+    waitminutes: "5"
+  image:
+    name: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images/bouncer
+    pullPolicy: Always
+    tag: 1.0.0
+
+imagePullSecrets:
+  - name: gcr-managed-fusion
+nameOverride: ""
+fullnameOverride: ""
