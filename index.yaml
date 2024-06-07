@@ -631,6 +631,33 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-basistech-0.0.1/fusion-basistech-0.0.1.tgz
     version: 0.0.1
+  fusion-replication-check:
+  - apiVersion: v2
+    appVersion: 1.27.4
+    created: "2024-06-07T17:35:12.983041096Z"
+    dependencies:
+    - name: redis-stack-server
+      repository: https://redis-stack.github.io/helm-redis-stack
+      version: 0.4.10
+    description: A Helm chart for Kubernetes
+    digest: 342e53f21567e03d2be3ae3cd9b47c78658c8b3196325733b8dd12a7286242e2
+    home: https://github.com/lucidworks-managed-fusion/fusion-replication-check.git
+    keywords:
+    - fusion
+    - replication
+    - solr
+    - lucidworks
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: fusion-replication-check
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    type: application
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-replication-check-0.1.0/fusion-replication-check-0.1.0.tgz
+    version: 0.1.0
   solr-autoscaling-operator:
   - apiVersion: v2
     appVersion: "1"
@@ -696,4 +723,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2024-06-06T19:15:53.002676962Z"
+generated: "2024-06-07T17:35:12.983190916Z"
