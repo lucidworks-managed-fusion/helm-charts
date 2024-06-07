@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "fusion-replication-check.roleBindingName" . }}
+  namespace: {{ include "fusion-replication-check.namespace" . }}
+  labels:
+    {{- include "fusion-replication-check.labels" . | nindent 4 }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "fusion-replication-check.serviceAccountName" . }}
+roleRef:
+  kind: Role
+  name: {{ include "fusion-replication-check.roleName" . }}
+  apiGroup: rbac.authorization.k8s.io

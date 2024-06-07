@@ -1,0 +1,15 @@
+name: redis-stack-server
+redis_stack_server:
+  image: "redis/redis-stack-server"
+  tag: "7.2.0-v10"
+  port: 6379
+  replicas: 1
+  storage_class: standard
+  storage: 1Gi
+  resources: 
+    requests:
+      memory: "4Gi"
+      cpu: "2000m"
+    limits: 
+      memory: "4Gi"
+      cpu: "2000m"
