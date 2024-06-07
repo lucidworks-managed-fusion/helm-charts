@@ -1,0 +1,89 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ template "fusion-replication-check.fullname" . }}
+  namespace: {{ template "fusion-replication-check.namespace" . }}
+  labels:
+    {{- include "fusion-replication-check.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+
+  {{- with .Values.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  schedule: {{ .Values.schedule | default "*/15 * * * *" | quote }}
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            {{- include "fusion-replication-check.labels" . | nindent 12 }}
+        spec:
+          serviceAccountName:  {{ template "fusion-replication-check.serviceAccountName" . }}
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- with .Values.nodeSelector }}
+          nodeSelector:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.imagePullSecrets }}
+          imagePullSecrets:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          containers:
+            - name: {{ .Chart.Name }}
+              image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              env:
+                - name: CUSTOMER_NAME
+                  value: {{ .Values.customerName }}
+                - name: CLUSTER_NAME
+                  value: {{ .Values.clusterName }}
+                - name: CLUSTER_TYPE
+                  value: {{ .Values.clusterType }}
+                - name: NAMESPACE
+                  value: {{ template "fusion-replication-check.namespace" . }}
+                - name: REPLICATION_ROUTING_KEY
+                  value: {{ .Values.replicationRoutingKey | quote }}
+                - name: TIMEOUT_ROUTING_KEY
+                  value: {{ .Values.timeoutRoutingKey | quote}}
+                - name: RESULTS_DIR
+                  value: /results
+                - name: GET_LOGS
+                  value: {{ .Values.getLogs | quote }}
+                - name: GET_SNAPSHOT
+                  value: {{ .Values.getSnapshot | quote }}
+                - name: GCS_BUCKET
+                  value: {{ .Values.bucket.name }}
+                - name: GOOGLE_APPLICATION_CREDENTIALS
+                  value: /root/.gcp/cloud
+              {{- with .Values.resources }}
+              resources:
+                {{- toYaml . | nindent 16 }}
+              {{- end }}
+              volumeMounts:
+                - name: pod-definition
+                  mountPath: /opt/pod-files
+                - name: results-volume
+                  mountPath: /results
+                - name: gcs-credentials
+                  mountPath: /root/.gcp
+              command:
+                - "/bin/bash"
+                - "-c"
+                - "/usr/local/bin/sdk_setup.sh /opt/pod-files/alert_manager.sh /opt/pod-files/collections.txt"
+          restartPolicy: OnFailure
+          volumes:
+            - name: gcs-credentials
+              secret:
+                secretName: {{ .Values.bucket.gcsCredentialsSecret }}
+            - name: pod-definition
+              configMap:
+                name: {{ include "fusion-replication-check.fullname" . }}
+                defaultMode: 0555
+            - name: results-volume
+              persistentVolumeClaim:
+                claimName: {{ include "fusion-replication-check.fullname" . }}

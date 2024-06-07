@@ -1,0 +1,1015 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "fusion-replication-check.fullname" . }}
+  namespace: {{ include "fusion-replication-check.namespace" . }}
+data:
+  collections.txt: |
+{{- .Values.collections | nindent 4 }}
+
+  alert_manager.sh: |-
+    #!/usr/bin/env bash
+
+    export COMMONS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+
+    . $COMMONS_DIR/solr_collections_commons.sh
+
+    export COLLECTIONS=$1
+
+    function get_redis_svc() {
+      kubectl get svc -l app=redis-stack-server --no-headers | awk '{print $1}' | sort -r | head -n 1
+    }
+
+    function create_pd_event(){
+        typeset var local ROUTING_KEY="$1"
+        typeset var local EVENT_ACTION="trigger"
+        typeset var local SEVERITY="critical"
+        typeset var local CLASS="$2"
+        typeset var local SUMMARY=
+        typeset var local DEDUP_KEY=
+        if [ $# -eq 3 ]; then
+            DEDUP_KEY="$3"
+        fi
+        if [ $CLASS == "replication" ]; then
+            SUMMARY="${CUSTOMER_NAME} Errors Encountered at index replication on $CLUSTER_NAME namespace ${NAMESPACE}"
+        elif [ $CLASS == "timeout" ]; then
+            SUMMARY="Errors timeout for some solr to acquire metrics on $CLUSTER_NAME"
+        fi
+        printf '{\n'
+        printf '  "routing_key": "%s",\n' $ROUTING_KEY
+        printf '  "event_action": "%s",\n' $EVENT_ACTION
+        printf '  "payload": {\n'
+        printf '    "severity": "%s",\n' $SEVERITY
+        printf '    "source": "replication-alerter",\n'
+        printf '    "summary": "%s",\n' "$SUMMARY"
+        printf '    "component":  "solr",\n'
+        printf '    "group": "replication",\n'
+        printf '    "class": "%s",\n' $CLASS
+        printf '    "custom_details": {\n'
+        printf '    "details": "%s\\n' "$SUMMARY"
+        printf '\\tcustomer: %s\\n'  "$CUSTOMER_NAME"
+        printf '\\tcluster: %s\\n'  "$CLUSTER_NAME"
+        printf '\\tcluster_type: %s\\n'  "$CLUSTER_TYPE"
+        printf '\\tnamespace: %s\\n'  "$NAMESPACE"
+        if [ $CLASS == "replication" ]; then
+            printf '\\treplication_problems: [\\n'
+            while read LINE_FON ; do 
+                printf '%s' $LINE_FON
+            done < <(echo "GET current" | $REDIS_CMD | jq -r '.errors.replication[]' | jq -R | sed 's/^"/\\\\t/g;s/"$/\\\\n/g;s/"/\\\\"/g'  )
+            printf '\\t]\\n"'
+        elif [ $CLASS == "timeout" ]; then
+            printf '\\t\\ttimeout_problems: [\\n'
+            while read BASE_URL ; do
+                printf '\\t\\tbase_url: %s,\\n' $BASE_URL
+            done < <(echo "GET current" | $REDIS_CMD | jq -r '.errors.timeout[] | [.base_url] | @tsv')
+            printf '\\t]\\n"'
+        fi
+        printf '    }\n'
+        printf '  }'
+        if [ ! -z "$DEDUP_KEY" ]; then
+            printf ',\n'
+            printf '  "dedup_key": "%s"\n' $DEDUP_KEY
+        else
+            printf '\n'
+        fi    
+        printf '}\n'
+    }
+
+    #TODO: Uncomment this line to use the local solr
+    REDIS_HOST=$(get_redis_svc)
+    REDIS_PORT=$(kubectl get svc $REDIS_HOST -o jsonpath='{.spec.ports[0].port}')
+    # REDIS_HOST=localhost
+    # REDIS_PORT=6379
+
+    REDIS_CMD="redis-cli -h $REDIS_HOST -p $REDIS_PORT"
+
+    IS_NEW=$(echo "EXISTS current" | $REDIS_CMD | awk '{print $1}')
+    if [ $IS_NEW -eq 0 ]; then
+        echo "{\n  \"errors\": {\n    \"timeout\": [],\n    \"replication\": []\n  }\n}" | $REDIS_CMD -x set current > /dev/null
+    fi
+
+    echo "COPY current last REPLACE" | $REDIS_CMD > /dev/null
+    #$COMMONS_DIR/get_replication_details.sh $COLLECTIONS | $REDIS_CMD -x set current >/dev/null
+    $COMMONS_DIR/check_replication.sh $COLLECTIONS | $REDIS_CMD -x set current >/dev/null
+
+    CURRENT=($(echo "GET current" | $REDIS_CMD | jq -r '.errors as $errors | $errors.timeout | length as $timeouts | $errors.replication | length as $replication | [$timeouts, $replication] | @tsv'))
+    LAST=($(echo "GET last" | $REDIS_CMD | jq -r '.errors as $errors | $errors.timeout | length as $timeouts | $errors.replication | length as $replication | [$timeouts, $replication] | @tsv'))
+    if [ ${CURRENT[1]} -ne 0 ] ; then
+        echo "Replication errors found" >&2
+
+        export SNAPSHOT_DIR="snapshot_`TZ=UTC date '+%Y-%m-%d_%H-%M-%S'`"
+        rm -Rf $RESULTS_DIR/snapshot*
+
+        if [ "$GET_LOGS" == "true" ] || [ "$GET_SNAPSHOT" == "true" ] ; then
+            mkdir -p $RESULTS_DIR/$SNAPSHOT_DIR
+            if [ "$GET_SNAPSHOT" == "true" ]; then
+                echo "Taking environment snapshot..."
+                echo "GET current" | $REDIS_CMD > ${RESULTS_DIR}/${SNAPSHOT_DIR}/replication_errors.json
+                $COMMONS_DIR/snapshot.sh $SNAPSHOT_DIR
+            fi
+
+            if [ "$GET_LOGS" == "true" ] ; then
+                echo "Collecting solr logs..."
+                $COMMONS_DIR/get_solr_logs.sh -f $RESULTS_DIR/$SNAPSHOT_DIR
+            fi
+            cd $RESULTS_DIR
+            echo "Creating a snapshot zip file..."
+            export FILE_NAME="${SNAPSHOT_DIR}.zip"
+
+            zip -r -9 ${FILE_NAME} $SNAPSHOT_DIR
+            rm -r $SNAPSHOT_DIR
+
+            if [ ! -f ${GOOGLE_APPLICATION_CREDENTIALS} ] ; then
+                echo ${GOOGLE_APPLICATION_CREDENTIALS}
+                echo "No GOOGLE_APPLICATION_CREDENTIALS set, skipping upload to GCS"
+            elif [ ! -z $GCS_BUCKET ] ; then
+                echo "Uploading snapshot to GCS..."
+                gsutil cp ${FILE_NAME} gs://$GCS_BUCKET/replication/snapshots/${NAMESPACE}/${FILE_NAME}
+            fi
+            rm -f ${FILE_NAME}
+        fi
+        if [ ${LAST[1]} -ne 0 ] ; then
+            create_pd_event $REPLICATION_ROUTING_KEY "replication" |  jq '.' | curl -X POST -H "Content-Type: application/json" -d @- "https://events.pagerduty.com/v2/enqueue"
+            echo "Alert replication errors" >&2
+            echo "GET current" | $REDIS_CMD >&2
+        else
+            echo "Replication errors were found "
+        fi
+    else
+        echo "No replication errors"
+    fi
+
+    if [ ${CURRENT[0]} -ne 0 ] && [ ${LAST[0]} -ne 0 ] ; then
+        create_pd_event $TIMEOUT_ROUTING_KEY "timeout" |  jq '.' | curl -X POST -H "Content-Type: application/json" -d @- "https://events.pagerduty.com/v2/enqueue"
+        echo "Alert timeout errors" >&2
+    # else
+    #     echo "No timeout errors"
+    fi
+  bash_commons.sh: |-
+    #!/usr/bin/env bash
+
+    export SCRIPT_NAME=$(basename $0)
+    if [ -z $BASE_DIR ] ; then
+      export BASE_DIR=$(cd `dirname $0` ; pwd)
+    fi
+    export CURR_DIR=$(pwd)
+
+    export COMMONS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+
+    if [ -z $WORK_DIR ] ; then
+      export WORK_DIR="$COMMONS_DIR/results"
+    fi
+
+    # if [ ! -d $WORK_DIR ] ; then
+    #   mkdir -p $WORK_DIR
+    # fi
+
+    function wipeout_double_quotes() {
+      sed 's/^"//;s/"$//'
+    }
+
+    function get_json_property {
+      typeset var local PROP_NAME=$1
+      jq ".${PROP_NAME}" | wipeout_double_quotes
+    }
+
+    function urlencode() {
+      # urlencode <string>
+      old_lc_collate=$LC_COLLATE
+      LC_COLLATE=C
+      
+      local length="${#1}"
+      for (( i = 0; i < length; i++ )); do
+        local c="${1:i:1}"
+        case $c in
+          [a-zA-Z0-9.~_-]) printf "$c" ;;
+          *) printf '%%%02X' "'$c" ;;
+        esac
+      done
+      
+      LC_COLLATE=$old_lc_collate
+    }
+
+
+    function urldecode() { : "${*//+/ }"; echo -e "${_//%/\\x}"; }
+
+
+    function url_encode_file(){
+      typeset var local FILE="${1}"
+      typeset var local OLD_IFS=$IFS
+      typeset var local LINE=
+      IFS=$'\n'
+      sed 's/[^[:print:]]//g' $FILE | while read LINE  ; do
+        urlencode $LINE
+        echo
+      done
+      IFS=$OLD_IFS
+    }
+
+
+    function to_pascal_case() {
+      typeset var local TEXT="$1"
+      for WORD in $(echo ${TEXT[@]^} | tr '[A-Z]' '[a-z]') ; do
+        FirstLeter=$(echo $WORD | cut -c1 | tr '[a-z]' '[A-Z]')
+        Rest=$(echo $WORD | cut -c2 )
+        printf "%s%s" $FirstLeter ${WORD:1}
+      done
+      printf "\n"
+    }
+
+    function test_command {
+      typeset var local COMMAND=$1
+      typeset var local exitSts=0
+      which $COMMAND >/dev/null 2>&1
+      exitSts=$?
+      if [ $exitSts -eq 0 ] ; then
+        echo 0
+      else
+        echo 1
+      fi
+    }
+
+    function command_exists {
+      typeset var local COMMAND="$1"
+      [ $(test_command "$COMMAND") -eq 0 ]
+    }
+
+    function generate_random_password() {
+      typeset var local LENGTH=16
+      if [ $# -gt 0 ] ; then
+        LENGTH=$1
+      fi
+      typeset var local RESULT=
+      while [ -z $RESULT ] ; do
+        RESULT=$(date +%s | sha256sum | base64 | head -c $LENGTH ; echo | awk '/[a-z]/ && /[A-Z]/ && /[0-9]/' ; echo)
+        if  [[ ! $RESULT =~ [0-9] ]] || [[ ! $RESULT =~ [a-z] ]] || [[ ! $RESULT =~ [A-Z] ]] ; then
+          RESULT=
+        fi
+      done
+      echo $RESULT
+    }
+
+    function test_command {
+      typeset var local COMMAND=$1
+      typeset var local exitSts=0
+      which $COMMAND >/dev/null 2>&1
+      exitSts=$?
+      if [ $exitSts -eq 0 ] ; then
+        echo 0
+      else
+        echo 1
+      fi
+    }
+
+    function command_exists {
+      typeset var local COMMAND="$1"
+      [ $(test_command "$COMMAND") -eq 0 ]
+    }
+
+    function generate_random_password() {
+      typeset var local LENGTH=16
+      if [ $# -gt 0 ] ; then
+        LENGTH=$1
+      fi
+      typeset var local RESULT=
+      while [ -z $RESULT ] ; do
+        RESULT=$(date +%s | sha256sum | base64 | head -c $LENGTH ; echo | awk '/[a-z]/ && /[A-Z]/ && /[0-9]/' ; echo)
+        if  [[ ! $RESULT =~ [0-9] ]] || [[ ! $RESULT =~ [a-z] ]] || [[ ! $RESULT =~ [A-Z] ]] ; then
+          RESULT=
+        fi
+      done
+      echo $RESULT
+    }
+
+    function get_OS_name() {
+      OS_NAME=$(uname -s)
+      if [ "$OS_NAME" == "Darwin" ] ; then
+        echo "macos"
+      elif [ "$OS_NAME" == "Linux" ] ; then
+        echo "linux"
+      else
+        echo "unknown"
+      fi
+    }
+
+    OS_NAME=$(get_OS_name)
+    if [ "$OS_NAME" == "macos" ] ; then
+      export DATE_CMD=gdate
+    else
+      export DATE_CMD=date
+    fi
+    # $TODO: change gdate to date
+    # DATE_CMD=gdate
+
+    function date2stamp() {
+        $DATE_CMD --utc --date "$1" +%s
+    }
+
+    function dateDiff() {
+        case $1 in
+            -s)   sec=1;      shift;;
+            -m)   sec=60;     shift;;
+            -h)   sec=3600;   shift;;
+            -d)   sec=86400;  shift;;
+            *)    sec=86400;;
+        esac
+        dte1=$(date2stamp "$1")
+        dte2=$(date2stamp "$2")
+        diffSec=$((dte2-dte1))
+        if ((diffSec < 0)); then abs=-1; else abs=1; fi
+        echo $((diffSec/sec))
+    }
+  check_replication.sh: |-
+    #!/usr/bin/env bash
+
+    export COMMONS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+
+    . $COMMONS_DIR/solr_collections_commons.sh
+    . $COMMONS_DIR/json_commons.sh
+
+    export SOLR_SVC=$(get_solr_svc)
+
+    #TODO: Comment this before commit
+    #export SOLR_SVC="localhost"
+
+    export SOLR_URL="http://$SOLR_SVC:8983/solr"
+
+    export COLLECTIONS=$1
+
+    export COLLECTIONS_INFO=$(mktemp)
+
+    export LIVE_NODES=$(mktemp)
+
+    get_solr_nodes | sort | uniq > $LIVE_NODES
+
+    touch $COLLECTIONS_INFO
+    while read COLLECTION ; do
+        if [[ "$COLLECTION" == \#* ]] | [[ "$COLLECTION" == '^\s*$' ]] ; then
+            continue
+        fi
+        COLLECTION_EXISTS=$(get_collections | grep "^${COLLECTION}$" | wc -l)
+        if [ $COLLECTION_EXISTS -eq 0 ] ; then
+            #echo "Error - Collection $COLLECTION does not exist" >&2
+            continue
+        fi
+        # echo $COLLECTION
+        get_collection_details $COLLECTION  | jq -r '.[] | [.collection, .shard, .type, .state, .replica, .core, .node_name, .base_url, .leader] | @tsv' >> $COLLECTIONS_INFO
+    done < <(cat $COLLECTIONS ; echo)
+
+    export DETAILS=$(mktemp)
+    export REPLICATION_DETAILS=$(mktemp)
+    touch $REPLICATION_DETAILS
+
+    export PROBLEMS=$(mktemp)
+    touch $PROBLEMS
+
+    while read COLLECTION SHARD TYPE STATE REPLICA CORE NODE_NAME BASE_URL LEADER ; do
+        if [ "$STATE" == "active" ] ; then
+            #TODO: Uncomment this line to use the local solr   
+            # get_replication_details $COLLECTION "http://localhost:8983/solr" >$DETAILS
+            # get_replication_details $COLLECTION "${BASE_URL}" > $DETAILS
+            SOLR_NAME=$(echo $NODE_NAME | awk -F '.' '{print $1}')
+            get_replication_status "${CORE}" "${COLLECTION}" "${SHARD}" "${LEADER}" > $DETAILS
+            status=$?
+            if [ $status -eq 0 ] ; then
+                # jq -r '[.collection, .core, .shard, .replica, .index_version, .generation] | @tsv' $DETAILS | sed "s/generation=.*,version=/$LEADER\t/g" >> $REPLICATION_DETAILS
+                jq -r '[.collection, .replica, .shard, .indexVersion, .generation] | @tsv' $DETAILS | sed "s|$|\t${SOLR_NAME}\t${LEADER}|g" >> $REPLICATION_DETAILS
+            else
+                #echo "Error - $BASE_URL connection timeout" >&2
+                add_timeout_error $BASE_URL
+            fi
+        fi
+    done < $COLLECTIONS_INFO
+
+    export LEADERS=$(mktemp)
+    export FOLLOWERS=$(mktemp)
+    grep 'true$' $REPLICATION_DETAILS > $LEADERS
+    grep 'false$' $REPLICATION_DETAILS > $FOLLOWERS
+    # Use to simulate errors
+    #head -n 3 $FOLLOWERS | sed 's|[0-9]*\(\t[[:graph:]]*\tfalse\)$|3214\1|g'  >> $FOLLOWERS
+    export ERRORS=$(mktemp)
+
+
+    while read COLLECTION ; do
+        if [[ "$COLLECTION" == \#* ]] | [[ "$COLLECTION" == '^\s*$' ]] ; then
+            continue
+        fi
+        while read COL_NAME CORE SHARD INDEX_VERSION GENERATION NODE_NAME LEADER ; do
+            EQUALS=$(grep "^$COLLECTION\t[^ ]*\t${SHARD}\t${INDEX_VERSION}\t${GENERATION}\t" $FOLLOWERS | wc -l)
+            TOTAL=$(grep "^$COLLECTION\t[^ ]*\t${SHARD}" $FOLLOWERS | wc -l)
+            if [ $EQUALS -ne $TOTAL ] ; then
+                echo "Problem - $COLLECTION $SHARD $CORE $INDEX_VERSION $GENERATION" >> $PROBLEMS
+                while read ECOL_NAME ECORE ESHARD EINDEX_VERSION EGENERATION NODE_NAME ELEADER ; do
+                    if [ $EGENERATION -eq $GENERATION ] ; then
+                        continue
+                    fi
+                    add_replication_error $COLLECTION $SHARD $ECORE $EINDEX_VERSION $EGENERATION $INDEX_VERSION $GENERATION $NODE_NAME
+                done < <(grep "^$COLLECTION\t[^ ]*\t${SHARD}" $FOLLOWERS | grep -v "\t${INDEX_VERSION}\t${GENERATION}$")            
+            fi
+        done < <(grep "^$COLLECTION\t[^ ]*\t" $LEADERS)
+    done < <(cat $COLLECTIONS ; echo)
+
+
+    echo '{ "errors": { "timeout": ' > $ERRORS
+
+    cat $TIMEOUT_ERRORS | jq -s '.' >>$ERRORS 
+    echo ', "replication": ' >> $ERRORS
+    cat $REPLICATION_ERRORS | jq -s '.' >>$ERRORS
+    echo '}}' >> $ERRORS
+    cat $ERRORS | jq '.'
+
+    rm -f $LIVE_NODES $COLLECTIONS_INFO $LEADERS $FOLLOWERS $DETAILS $REPLICATION_DETAILS $PROBLEMS $TIMEOUT_ERRORS $REPLICATION_ERRORS $ERRORS
+  get_replication_details.sh: |-
+    #!/usr/bin/env bash
+
+    export COMMONS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+
+    . $COMMONS_DIR/solr_collections_commons.sh
+    . $COMMONS_DIR/json_commons.sh
+
+    export SOLR_SVC=$(get_solr_svc)
+
+    #TODO: Comment this before commit
+    # export SOLR_SVC="localhost"
+
+    export SOLR_URL="http://$SOLR_SVC:8983/solr"
+
+    export COLLECTIONS=$1
+
+    export COLLECTIONS_INFO=$(mktemp)
+
+    touch $COLLECTIONS_INFO
+    while read COLLECTION ; do
+        if [[ "$COLLECTION" == \#* ]] | [[ "$COLLECTION" == '^\s*$' ]] ; then
+            continue
+        fi
+        COLLECTION_EXISTS=$(get_collections | grep "^${COLLECTION}$" | wc -l)
+        if [ $COLLECTION_EXISTS -eq 0 ] ; then
+            #echo "Error - Collection $COLLECTION does not exist" >&2
+            continue
+        fi
+        get_collection_details $COLLECTION  | jq -r '.[] | [.collection, .shard, .type, .state, .replica, .core, .node_name, .base_url, .leader] | @tsv' >> $COLLECTIONS_INFO
+    done < <(cat $COLLECTIONS ; echo)
+
+    export DETAILS=$(mktemp)
+    export REPLICATION_DETAILS=$(mktemp)
+    touch $REPLICATION_DETAILS
+
+    export PROBLEMS=$(mktemp)
+    touch $PROBLEMS
+
+    while read COLLECTION SHARD TYPE STATE REPLICA CORE NODE_NAME BASE_URL LEADER ; do
+        if [ "$STATE" == "active" ] ; then
+            get_replication_status "${CORE}" "${COLLECTION}" "${SHARD}" "${LEADER}" > $DETAILS
+            jq -r '[.collection, .shard, .isLeader, .replica, .indexVersion, .generation, .isReplicating, .leaderIndexVersion, .leaderGeneration, .replicableVersion, .replicableGeneration, .replicationFailedAt, .currentDate, .timesFailed, .leaderUrl, .indexReplicatedAt] | @csv' $DETAILS >> $REPLICATION_DETAILS
+        fi
+    done < $COLLECTIONS_INFO
+
+
+    export LEADERS=$(mktemp)
+    export FOLLOWERS=$(mktemp)
+    grep '^[^,]*,[^,]*,\"true\"' $REPLICATION_DETAILS > $LEADERS
+    grep '^[^,]*,[^,]*,\"false\"' $REPLICATION_DETAILS > $FOLLOWERS
+    #grep '^[^ ]*\t[^ ]*\t[^ ]*\t[^ ]*\tfalse' $REPLICATION_DETAILS > $FOLLOWERS
+    # Use to simulate errors
+    #head -n 3 $FOLLOWERS | sed 's/[0-9]*$/3214/g' >> $FOLLOWERS
+
+    while IFS=, read -r COLLECTION SHARD IS_LEADER REPLICA INDEX_VERSION GENERATION IS_REPLICATING LEADER_INDEX_VERSION LEADER_GENERATION REPLICABLE_VERSION REPLICABLE_GENERATION REPLICATION_FAILED_AT CURRENT_DATE TIMES_FAILED LEADER_URL INDEX_REPLICATED_AT
+    do
+        if [ $TIMES_FAILED -gt 0 ] ; then
+            if [ $LEADER_GENERATION -ne $GENERATION ] ; then
+                REPLICATION_FAILED_AT=$(echo $REPLICATION_FAILED_AT | sed 's/"//g')
+                INDEX_REPLICATED_AT=$(echo $INDEX_REPLICATED_AT | sed 's/"//g')
+                FAILED_HRS=$(dateDiff -h "$REPLICATION_FAILED_AT"  "$INDEX_REPLICATED_AT")
+                # FAILED_HRS=$(dateDiff -h "$INDEX_REPLICATED_AT" "$REPLICATION_FAILED_AT")
+                # echo $FAILED_HRS
+                if [ $FAILED_HRS -lt -4 ] ; then
+                    get_replication_status $(echo "${REPLICA} ${COLLECTION} ${SHARD} ${IS_LEADER}" | sed 's/"//g') >> $REPLICATION_ERRORS
+                    # echo "$COLLECTION $SHARD $IS_LEADER $REPLICA $INDEX_VERSION $GENERATION $IS_REPLICATING $LEADER_INDEX_VERSION $LEADER_GENERATION $REPLICABLE_VERSION $REPLICABLE_GENERATION $REPLICATION_FAILED_AT $CURRENT_DATE $TIMES_FAILED $LEADER_URL $INDEX_REPLICATED_AT" >2
+                fi
+            fi
+        fi
+    done < <(grep '^[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,\"false\"' $FOLLOWERS)
+
+    export ERRORS=$(mktemp)
+
+    echo '{ "errors": { "timeout": []' > $ERRORS
+
+    echo ', "replication": ' >> $ERRORS
+    cat $REPLICATION_ERRORS | jq -s '.' >>$ERRORS
+    echo '}}' >> $ERRORS
+    cat $ERRORS | jq '.'
+
+
+    rm -f $COLLECTIONS_INFO $EXSISTING_COLLECTIONS $DETAILS $REPLICATION_DETAILS $PROBLEMS $LEADERS $FOLLOWERS $REPLICATION_ERRORS $ERRORS
+
+    exit 0
+  get_solr_logs.sh: |-
+    #!/usr/bin/env bash
+
+    export SCRIPT_NAME=$(basename $0)
+    if [ -z $BASE_DIR ] ; then
+      export BASE_DIR=$(cd `dirname $0` ; pwd)
+    fi
+    export CURR_DIR=$(pwd)
+    export SCRIPTS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+
+    . $SCRIPTS_DIR/bash_commons.sh
+
+    QUERY_PIPELINE="app.kubernetes.io/component=query-pipeline"
+    SOLR="app.kubernetes.io/name=solr,app.kubernetes.io/component=server"
+    SOLR="app.kubernetes.io/name=solr"
+
+
+    INTERVAL=5
+    SELECTOR=$SOLR
+    TIMESTAMP=$(TZ=UTC date +%Y%m%d_%H%M%S)
+    #NAMESPACE=$(kubectl config view --minify --output 'jsonpath={..namespace}')
+
+    function prep_term() {
+      unset term_child_pid
+      unset term_kill_needed
+      trap 'handle_term' SIGINT SIGTERM ERR EXIT
+    }
+
+    function usage() {
+      echo "
+      Usage:
+      ${SCRIPT_NAME} -h shows this help
+      -s [SELECTOR]  : Selector for the pods
+      -n [NAMESPACE] : Namespace for the pods
+      "
+      exit 0
+    }
+
+    function copy_files() {
+      typeset var local POD_NAME=$1
+      typeset var local FOLDER_NAME=$2
+      FILENAMES=$(kubectl exec -it $POD_NAME -c solrcloud-node -n $NAMESPACE -- /bin/sh -c 'cd /var/solr/logs ; ls  solr.log* | grep -v request' 2>/dev/null)
+    #   FILENAMES=$(kubectl exec -it $POD_NAME -c solrcloud-node -n $NAMESPACE -- /bin/sh -c 'cd /var/solr/logs ; ls  *.log.* solr*.log | grep -v request' 2>/dev/null)
+      for FILENAME in ${FILENAMES[@]} ; do
+        FILENAME=$(echo $FILENAME | sed 's/\r$//' )
+        kubectl cp -c solrcloud-node $NAMESPACE/$POD_NAME:/var/solr/logs/$FILENAME $FOLDER_NAME/$FILENAME >/dev/null 2>&1
+      done
+    }
+
+
+    function handle_term() {
+      term_kill_needed="yes"
+      kill -9 ${ALL_PIDS[@]}
+    }
+
+    function wait_term() {
+      term_child_pid=$!
+      if [ "${term_kill_needed}" ]; then
+        kill -TERM "${term_child_pid}" 2>/dev/null 
+      fi
+      wait ${term_child_pid} 2>/dev/null
+      trap - TERM INT
+      wait ${term_child_pid} 2>/dev/null
+    }
+    INDEX=0
+    ALL_PIDS=()
+    DUMP_HEAD=
+    THREAD_DUMP=
+    SOLR_INDEX=0
+
+    if [ ! -z $RESULTS_DIR ] ; then
+      WORK_DIR=$RESULTS_DIR
+    fi
+
+    while getopts "htdi:f:" opt; do
+      case ${opt} in
+        h ) usage
+        ;;
+        d ) DUMP_HEAD="yes"
+        ;;
+        t ) THREAD_DUMP="yes"
+        ;;
+        i ) SOLR_PODS[SOLR_INDEX]=${OPTARG}
+          ((SOLR_INDEX+=1))
+        ;;
+        f ) WORK_DIR=${OPTARG}
+        ;;
+        \? ) usage
+        ;;
+      esac
+    done
+
+    if [ $SOLR_INDEX -eq 0 ] ; then
+      SOLR_PODS=($(kubectl -n $NAMESPACE get pods -l "$SELECTOR" --no-headers | awk '{print $1}'))
+    fi
+
+    shift $((OPTIND -1))
+
+    for POD_NAME in ${SOLR_PODS[@]} ; do
+      if [ "${term_kill_needed}" ] ; then
+        continue
+      fi
+      FOLDER_NAME=$WORK_DIR/solr_logs/$POD_NAME
+      mkdir -pm 755 $FOLDER_NAME
+      copy_files $POD_NAME $FOLDER_NAME &
+      ALL_PIDS[$INDEX]=$!
+      trap - SIGTERM SIGINT
+      ((INDEX+=1))
+      if [ $INDEX -ge $INTERVAL ] ; then
+        wait
+        INDEX=0
+        ALL_PIDS=()
+      fi
+    done
+
+    wait
+
+    exit 0
+  json_commons.sh: |-
+    #!/usr/bin/env bash
+
+    export SCRIPT_NAME=$(basename $0)
+    if [ -z $BASE_DIR ] ; then
+      export BASE_DIR=$(cd `dirname $0` ; pwd)
+    fi
+    export CURR_DIR=$(pwd)
+
+    export COMMONS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+
+
+    export TIMEOUT_ERRORS=$(mktemp)
+    touch $TIMEOUT_ERRORS
+    #echo '[' > $TIMEOUT_ERRORS
+
+
+    function add_timeout_error() {
+      typeset var local BASE_URL="$1"
+      echo "{\"base_url\": \"$BASE_URL\"}" >> $TIMEOUT_ERRORS
+    }
+
+    export REPLICATION_ERRORS=$(mktemp)
+    touch $REPLICATION_ERRORS
+
+    function add_replication_error() {
+      typeset var local COLLECTION="$1"
+      typeset var local SHARD="$2"
+      typeset var local REPLICA="$3"
+      typeset var local INDEX_VERSION="$4"
+      typeset var local GENERATION="$5"
+      typeset var local LEADER_VERSION="$6"
+      typeset var local LEADER_GENERATION="$7"
+      typeset var local NODE_NAME="$8"
+      echo "{\"collection\": \"$COLLECTION\", \"shard\": \"$SHARD\", \"replica\": \"$REPLICA\", \"version\": \"$INDEX_VERSION\", \"generation\":\"$GENERATION\", \"leader_version\": \"${LEADER_VERSION}\", \"leader_generation\": \"${LEADER_GENERATION}\", \"pod_name\": \"${NODE_NAME}\"}" >> $REPLICATION_ERRORS
+    }
+  snapshot.sh: |-
+    #!/bin/bash
+
+    # This script takes a "snapshot" of the current cluster state and records
+    # detailed information about the nodes, pods, it also collects operator logs
+    # and the current Solr cluster state.
+
+
+    export SCRIPT_NAME=$(basename $0)
+    if [ -z $BASE_DIR ] ; then
+      export BASE_DIR=$(cd `dirname $0` ; pwd)
+    fi
+    export CURR_DIR=$(pwd)
+    export SCRIPTS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+
+    function usage() {
+      echo "
+      Usage: $0 <NAMESPACE> [OPTIONS]
+
+      Options:
+
+      $0 -h shows this help
+      $0 -l voids solr logs
+      "
+      exit 0
+    }
+
+    export SOLR_LOGS="true"
+
+    #SNAPSHOT_DIR="snapshot_`TZ=UTC date '+%Y-%m-%d_%H-%M-%S'`"
+    SNAPSHOT_DIR="$1"
+
+    if [ ! -z $RESULTS_DIR ] ; then
+      DIR="${RESULTS_DIR}/${SNAPSHOT_DIR}"
+    fi
+
+    mkdir -p $DIR
+    echo "Collecting operator logs..."
+    kubectl logs -l app=solr-autoscaling-operator --tail=-1 --timestamps=true --prefix=true -n $NAMESPACE > $DIR/autoscaling-operator.log
+    kubectl logs -l control-plane=solr-operator --tail=-1 --timestamps=true --prefix=true -n $NAMESPACE > $DIR/solr-operator.log
+    echo "Collecting pod logs..."
+    kubectl get pods -o=custom-columns=NAME:.metadata.name,STATUS:.status.phase,READY:.status.containerStatuses[0].ready,RESTARTS:.status.containerStatuses[0].restartCount,NODE:.spec.nodeName -n $NAMESPACE > $DIR/pods.log
+    kubectl describe pods -n $NAMESPACE > $DIR/pods-descr.log
+    echo "Collecting node / SolrCloud / SolrScaling information..."
+    kubectl get nodes -L type,topology.kubernetes.io/zone > $DIR/nodes.log
+    kubectl get nodes -o yaml > $DIR/nodes.yaml
+    kubectl get solrclouds -o yaml -n $NAMESPACE > $DIR/solrclouds.yaml
+    kubectl get solrscalings -o yaml -n $NAMESPACE > $DIR/solrscalings.yaml
+    kubectl get all -o yaml -n $NAMESPACE > $DIR/cluster.yaml
+
+    echo "Collecting PV / PVC / HPA / ConfigMap information..."
+    kubectl get pvc -o yaml -n $NAMESPACE > $DIR/pvcs.yaml
+    kubectl get pv -o yaml -n $NAMESPACE > $DIR/pvs.yaml
+
+    kubectl get hpa -o yaml -n $NAMESPACE > $DIR/hpas.yaml
+    kubectl get configmaps -o yaml -n $NAMESPACE > $DIR/configmaps.yaml
+
+    echo "Collecting Solr CLUSTERSTATUS..."
+    kubectl exec internal-standard-solrcloud-0 -c solrcloud-node -- /usr/bin/curl -s 'http://localhost:8983/solr/admin/collections?action=CLUSTERSTATUS' -n $NAMESPACE > $DIR/solr_clusterstatus.json
+
+    echo "Collecting Overseer logs..."
+    kubectl exec internal-standard-solrcloud-0 -c solrcloud-node -- /usr/bin/curl -s 'http://localhost:8983/solr/admin/collections?action=OVERSEERSTATUS' -n $NAMESPACE > $DIR/solr_overseerstatus.json
+    OVERSEER=`cat $DIR/solr_overseerstatus.json | jq -r '.leader' | cut -f 1 -d .`
+    kubectl logs $OVERSEER -c solrcloud-node --tail=-1 > $DIR/solr_overseer.log
+  solr_collections_commons.sh: |-
+    #!/bin/bash
+
+    if [ -z $COMMONS_DIR ] ; then
+        export COMMONS_DIR=$(cd `dirname ${BASH_SOURCE[0]}` ; pwd)
+    fi
+
+    . $COMMONS_DIR/bash_commons.sh
+
+    function get_time_stamp() {
+      date +%Y%m%d%H%M%S
+    }
+
+    function get_script_stamp() {
+      if [ -z $_TIMESTAMP ] ; then
+        export _TIMESTAMP=$(get_time_stamp)
+      fi
+      echo $_TIMESTAMP
+    }
+
+    function get_time_increaser() {
+      if [ -z $_INCREASER ] ; then
+        export _INCREASER=0
+      fi
+      ((_INCREASER+=1))
+
+      echo $(get_script_stamp)"${_INCREASER}"
+    }
+
+    function call_solr_api() {
+      typeset var local CMD="$1"
+      if [ $# -eq 2 ] ; then
+        typeset var local SOLR_URL="$2"
+      fi
+      curl -s -XGET "$SOLR_URL/${CMD}"
+    }
+
+    function get_solr_svc() {
+      kubectl get svc -l app.kubernetes.io/name=solr,service-type=headless --no-headers | awk '{print $1}' | sort -r | head -n 1
+    }
+
+    function get_solr_nodes() {
+      call_solr_api "admin/collections?action=CLUSTERSTATUS" | jq '.cluster.live_nodes[]' | tr -d '"' | sort | uniq
+    }
+
+    function get_collections() {
+        call_solr_api "admin/collections?action=LIST" | jq '.collections[]' | tr -d '"' | sort | uniq
+    }
+
+    function get_collection_details() {
+      typeset var local COL_NAME="$1"
+      call_solr_api "admin/collections?action=CLUSTERSTATUS" | jq "
+      .cluster.collections | to_entries | .[] | select(.key == \"${COL_NAME}\") as \$parent | 
+      \$parent.value.shards | to_entries | .[] as \$shards | 
+      \$shards.value.replicas | to_entries | .[] as \$replicas |
+      (if \$replicas.value.leader != null then \"true\" else \"false\" end) as \$isLeader | 
+      { 
+        collection: \$replicas.value.collection, 
+        shard: \$shards.key, 
+        type: \$replicas.value.type, 
+        state: \$replicas.value.state, 
+        replica: \$replicas.value.core_node_name, 
+        core: \$replicas.value.core, 
+        node_name: \$replicas.value.node_name, 
+        base_url: \$replicas.value.base_url, leader: \$isLeader
+      }
+    " | jq -s "."
+    }
+
+    function get_replication_details(){
+      typeset var local COL_NAME="$1"
+      typeset var local SOLR_URL="$2"
+      typeset var local exitSts=0
+      typeset var local OUTPUT=$(mktemp)
+      curl -s --connect-timeout 60 -XGET "${SOLR_URL}/admin/metrics?expr=solr\.core\..*:REPLICATION\..*replication\.(generation|indexVersion|isFollower|isLeader).*&expr=solr\.core\..*:REPLICATION\..*replication\.fetcher.*" > $OUTPUT
+      exitSts=$?
+      cat $OUTPUT | jq "
+    .metrics | to_entries | .[] | select(.key | startswith(\"solr.core.\")) as \$parent |
+    \$parent.key | split(\".\") as \$parent_key_items |
+    \$parent_key_items | length as \$parent_key_item_len |
+    (if \$parent_key_item_len == 3 then \$parent_key_items[2] else \"\" end) as \$core |
+    (if \$parent_key_item_len == 5 then \$parent_key_items[2] else \"\" end) as \$collection |
+    (if \$parent_key_item_len == 5 then \$parent_key_items[3] else \"\" end) as \$shard |
+    (if \$parent_key_item_len == 5 then \$parent_key_items[4] else \"\" end) as \$replica |
+    (if \$parent_key_item_len == 5 then (\$collection + \"_\" + \$shard + \"_\" + \$replica) else \$core end) as \$core |
+    if \$parent_key_item_len == 3 then
+    \$parent.value | to_entries | .[] | select(.key == \"REPLICATION./replication.isLeader\") as \$object |
+    \$object.key | split(\".\")[0] as \$category |
+    \$object.key | split(\".\")[1] as \$handler |
+    {
+      category: \$category,
+      handler: \$handler,
+      core: \$core,
+    }
+    else
+    \$parent.value | .\"REPLICATION./replication.generation\" as \$generation | 
+    \$parent.value | .\"REPLICATION./replication.fetcher\" | .indexReplicatedAt as \$replicated_at |
+    \$parent.value | .\"REPLICATION./replication.fetcher\" | .timesIndexReplicated as \$times_replicated |
+    \$parent.value | .\"REPLICATION./replication.indexVersion\" as \$index_version |
+    {
+      core: \$core,
+      collection: \$collection,
+      shard: \$shard,
+      replica: \$replica,
+      replicated_at: \$replicated_at,
+      times_replicated: \$times_replicated,
+      index_version: \$index_version,
+      generation: \$generation
+    } 
+    end
+      " | jq -s ".[] | select (.collection == \"${COL_NAME}\")"
+    rm -f $OUTPUT
+    return $exitSts
+    }
+
+    function get_replication_status() {
+      typeset var local CORE="$1"
+      typeset var local COLLECTION="$2"
+      typeset var local SHARD="$3"
+      typeset var local LEADER="$4"
+      call_solr_api "${CORE}/replication?command=details" | jq "
+    .details as \$details | .status as \$status | \$details.follower as \$follower | \$follower.leaderDetails as \$leaderDetails
+    | (if \$follower.timesFailed != null then \$follower.timesFailed else 0 end) as \$timesFailed
+    | (if \$follower.replicationFailedAt != null then \$follower.replicationFailedAt else \"null\" end) as \$replicationFailedAt
+    | {
+        \"collection\": \"${COLLECTION}\",
+        \"shard\": \"${SHARD}\",
+        \"replica\": \"${CORE}\",
+        \"isLeader\": \"${LEADER}\",
+        \"indexVersion\": \$details.indexVersion, 
+        \"generation\": \$details.generation,
+        \"isReplicating\": \$follower.isReplicating,
+        \"leaderIndexVersion\": \$leaderDetails.indexVersion,
+        \"leaderGeneration\": \$leaderDetails.generation,
+        \"replicableVersion\": \$leaderDetails.leader.replicableVersion,
+        \"replicableGeneration\": \$leaderDetails.leader.replicableGeneration,
+        \"isReplicating\": \$follower.isReplicating,
+        \"replicationFailedAt\": \$replicationFailedAt,
+        \"currentDate\": \$follower.currentDate,
+        \"timesFailed\": \$timesFailed,
+        \"leaderUrl\": \$follower.leaderUrl,
+        \"indexReplicatedAt\": \$follower.indexReplicatedAt
+    }
+    " | jq -s ".[]" 
+    }
+
+
+    function get_leaders() {
+      typeset var local COL_NAME="$1"
+      get_collection_details $COL_NAME | jq ".[] | select(.leader == \"true\")" | jq -s "."
+    }
+
+    function get_followers(){
+      typeset var local COL_NAME="$1"
+      get_collection_details $COL_NAME | jq ".[] | select(.leader == \"false\")" | jq -s "."
+    }
+
+    function get_collection_info() {
+      typeset var local COL_NAME="$1"
+      call_solr_api "admin/collections?action=CLUSTERSTATUS" | jq ".cluster.collections.\"${COL_NAME}\"" 
+    }
+
+    function get_collection_status() {
+      typeset var local COL_NAME="$1"
+      call_solr_api "admin/collections?action=COLSTATUS&collection=${COL_NAME}&coreInfo=false&segments=false&fieldInfo=false&sizeInfo=false"
+
+    }
+
+    function get_collection_shards() {
+      typeset var local COL_NAME="$1"
+      get_collection_info $COL_NAME | jq -r '.shards | keys | .[]'
+    }
+
+    function get_collection_shard_replicas() {
+      typeset var local COL_NAME="$1"
+      typeset var local SHARD="$2"
+      get_collection_info "$COL_NAME" | jq -r ".shards.${SHARD}.replicas | keys | .[]" | sort | uniq 
+    }
+
+    function get_collection_shard_replica_status() {
+      typeset var local COL_NAME="$1"
+      typeset var local SHARD="$2"
+      typeset var local REPLICA="$3"
+      get_collection_info "$COL_NAME" | jq ".shards.${SHARD}.replicas.${REPLICA}"
+    }
+
+    function get_collection_shard_replica_leader(){
+      typeset var local COL_NAME="$1"
+      typeset var local SHARD="$2"
+      typeset var local REPLICA=
+      typeset var local LEADER=
+      typeset var local is_leader=
+      for REPLICA in $(get_collection_shard_replicas $COL_NAME $SHARD) ; do
+        is_leader=$(get_collection_shard_replica_status $COL_NAME $SHARD $REPLICA | jq -r ".leader")
+        if [[ $is_leader == "true" ]] ; then 
+          LEADER=$REPLICA
+          break;
+        fi
+      done
+      if [ ! -z $LEADER ] ; then
+        echo $LEADER
+      fi
+    }
+
+    function move_replica() {
+      typeset var local COLLECTION="$1"
+      typeset var local SHARD="$2"
+      typeset var local REPLICA="$3"
+      typeset var local SOURCE_NODE="$4"
+      typeset var local TARGET_NODE="$5"
+      typeset var local async_time=$(get_time_increaser)
+      #echo "admin/collections?action=MOVEREPLICA&collection=${COLLECTION}&shard=${SHARD}&replica=${REPLICA}&sourceNode=${SOURCE_NODE}&targetNode=${TARGET_NODE}"
+      call_solr_api "admin/collections?action=MOVEREPLICA&collection=${COLLECTION}&shard=${SHARD}&replica=${REPLICA}&sourceNode=${SOURCE_NODE}&targetNode=${TARGET_NODE}&async=${async_time}"
+    }
+
+    function add_replica() {
+      typeset var local COLLECTION="$1"
+      typeset var local SHARD="$2"
+      typeset var local TARGET_NODE="$3"
+      typeset var local TYPE="$4"
+      typeset var local async_time=$(get_time_increaser)
+      typeset var local CMD="admin/collections?action=ADDREPLICA&collection=${COLLECTION}&shard=${SHARD}&node=${TARGET_NODE}&type=${TYPE}&async=${async_time}"
+      call_solr_api "$CMD"
+    }
+
+    function delete_replica() {
+      typeset var local COLLECTION="$1"
+      typeset var local SHARD="$2"
+      typeset var local REP_NAME="$3"
+      typeset var local async_time=$(get_time_increaser)
+      typeset var local CMD="admin/collections?action=DELETEREPLICA&collection=${COLLECTION}&shard=${SHARD}&replica=${REP_NAME}&async=${async_time}"
+      if [ ! -z $DELETE_ENABLED ] && [[ "$DELETE_ENABLED" == "YES" ]] ; then
+        call_solr_api "$CMD"
+      else
+        echo "Delete disabled, call to disable collection:[$COLLECTION] shard:[$SHARD] replica:[$REP_NAME] was not applied."
+        if [ ! -z $DELETE_FILE ] ; then
+          touch $DELETE_FILE
+          echo "curl -s -XGET ${SOLR_URL}/${CMD}" >> $DELETE_FILE 
+        fi
+      fi
+    }
+
+    function get_replica_nodes_detail() {
+      typeset var local COL_NAME="$1"
+      typeset var local SHARD="$2"
+      get_collection_info "$COL_NAME" | jq ".shards.${SHARD}.replicas" | jq -r ' keys[] as $k | "\(.[$k] | .node_name) \(.[$k] | .type) \(.[$k] | .state) \(.[$k] | .leader) \($k)"'
+    }
+
+    function get_replica_nodes() {
+      typeset var local COL_NAME="$1"
+      typeset var local SHARD="$2"
+      get_replica_nodes_detail "$COL_NAME" "$SHARD" | awk '{print $1" "$2" "$5}'
+    }
+
+
+    function get_collection_shards_status() {
+      typeset var local COL_NAME="$1"
+      typeset var local SHARD="$2"
+      get_collection_info $COL_NAME | jq -r ".shards.${SHARD}.replicas[] | select(.leader) | \"\(.core) \(.type) \(.node_name) \(.state) \""
+    }
+
+    function get_replica_leader_detail() {
+      typeset var local COL_NAME="$1"
+      typeset var local SHARD="$2"
+      get_replica_nodes_detail $COL_NAME $SHARD | grep -v "[^ ]* null [^ ]*$"
+    }
+
+    function xor_file_lines(){
+      FILE1="$1"
+      FILE2="$2"
+      typeset var local RESULT_FILE=$(mktemp)
+      cat $FILE1 > $RESULT_FILE
+      while read LINE ; do
+        sed -i '' "/^${LINE}$/d" $RESULT_FILE
+      done < $FILE2
+      car $RESULT_FILE
+      rm -f $RESULT_FILE 
+    }
+
+    function get_collection_schema() {
+      typeset var local COLLECTION="$1"
+      typeset var local CMD="${COLLECTION}/admin/file?wt=json&file=managed-schema&contentType=text%2Fplain%3Bcharset%3Dutf-8"
+      call_solr_api "${CMD}"
+    }
+
+
+    export SOLR_URL="http://localhost:8983/solr"
+    export SEARCH_TYPE="NRT"
+    export MAX_INDEX=5
+    export DELETE_ENABLED="NO"
+    export DELETE_FILE=""

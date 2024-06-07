@@ -1,0 +1,76 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "fusion-replication-check.roleName" . }}
+  namespace: {{ include "fusion-replication-check.namespace" . }}
+  labels:
+    {{- include "fusion-replication-check.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["solr.apache.org", "solr.lucidworks.com", "autoscaling"]
+    resources:
+      - pods
+      - pods/log
+      - events
+      - services
+      - replicationcontrollers
+      - solrclouds
+      - solrscalings
+      - horizontalpodautoscalers
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+      - watch
+      - update
+      - patch
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - pods/exec
+      - events
+      - services
+      - replicationcontrollers
+      - configmaps
+      - persistentvolumes
+      - persistentvolumeclaims
+      - cronjobs
+    verbs:
+      - get
+      - list
+      - create
+      - delete
+      - watch
+      - update
+      - patch
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs
+      - jobs
+    verbs:
+      - list
+  - apiGroups:
+      - extensions
+    resources:
+      - deployments
+      - pods/log
+      - pods/status
+      - pods/var
+    verbs:
+      - get
+      - list
+      - create
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - daemonsets
+      - replicasets
+      - statefulsets
+    verbs:
+      - get
+      - list
+      - create
