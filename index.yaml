@@ -702,6 +702,29 @@ entries:
   status-reader:
   - apiVersion: v2
     appVersion: 1.27.4
+    created: "2024-06-28T15:40:27.644655576Z"
+    description: A Helm chart for Kubernetes
+    digest: 5709381e73ee6451302e1d01f5222412ae742c1cc0a12dd91e71351c1f4f836e
+    home: https://github.com/lucidworks-managed-fusion/status-reader.git
+    keywords:
+    - kubernetes
+    - status
+    - reader
+    - lucidworks
+    - snapshot
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: status-reader
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    type: application
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.1/status-reader-0.1.1.tgz
+    version: 0.1.1
+  - apiVersion: v2
+    appVersion: 1.27.4
     created: "2024-02-08T18:07:59.986930423Z"
     description: A Helm chart for Kubernetes
     digest: c297d81b613a4fafc25c030481b083fc182d925b8fe65044d7de66d92f9da8d2
@@ -723,4 +746,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2024-06-07T17:35:12.983190916Z"
+generated: "2024-06-28T15:40:27.644783515Z"
