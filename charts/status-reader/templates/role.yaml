@@ -6,45 +6,71 @@ metadata:
   labels:
     {{- include "status-reader.labels" . | nindent 4 }}
 rules:
-  - apiGroups: [""]
+  - apiGroups: ["solr.apache.org", "solr.lucidworks.com", "autoscaling"]
     resources:
-      - pods/exec
+      - pods
+      - pods/log
+      - events
+      - services
+      - replicationcontrollers
+      - solrclouds
+      - solrscalings
+      - horizontalpodautoscalers
     verbs:
       - get
       - list
-      - watch
       - create
+      - delete
+      - watch
+      - update
+      - patch
   - apiGroups: [""]
     resources:
       - pods
       - pods/log
-      - solrclouds
+      - pods/exec
+      - events
+      - services
       - replicationcontrollers
+      - configmaps
       - persistentvolumes
       - persistentvolumeclaims
       - cronjobs
-      - services
-      - configmaps
     verbs:
       - get
       - list
+      - create
+      - delete
+      - watch
+      - update
+      - patch
+  - apiGroups:
+      - batch
+    resources:
+      - cronjobs
+      - jobs
+    verbs:
+      - list
+  - apiGroups:
+      - extensions
+    resources:
+      - deployments
+      - pods/log
+      - pods/status
+      - pods/var
+    verbs:
+      - get
+      - list
+      - create
       - watch
   - apiGroups:
       - apps
-      - autoscaling
-      - solr.lucidworks.com
-      - solr.apache.org
-      - batch
     resources:
       - deployments
-      - statefulsets
-      - replicasets
       - daemonsets
-      - solrscalings
-      - solrclouds
-      - jobs
-      - horizontalpodautoscalers
-      - cronjobs
+      - replicasets
+      - statefulsets
     verbs:
       - get
       - list
+      - create
