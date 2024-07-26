@@ -56,6 +56,8 @@ spec:
               value: {{ required "A valid .Values.excludedCollections entry required!" .Values.excludedCollections }}
             - name: BACKUP_MAX_BACKUP_POINTS
               value: {{ quote .Values.maxBackupPoints }}
+            - name: BACKUP_PUB_SUB_ENABLED
+              value: {{ quote .Values.pubSubEnabled }}
           volumeMounts:
             - name: gcs-credentials
               mountPath: {{ .Values.gcsMountPath | default "/etc/gcs" | quote }}

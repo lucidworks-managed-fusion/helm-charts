@@ -18,4 +18,4 @@ maintainers:
 name: collection-backups
 sources:
   - https://github.com/lucidworks-managed-fusion/helm-charts.git
-version: 0.2.8
+version: 0.2.9
