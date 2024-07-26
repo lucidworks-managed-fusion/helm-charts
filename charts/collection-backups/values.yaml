@@ -3,6 +3,7 @@ schedule: "0 0 0 * * ?"
 zookeeperHost:
 customerId:
 maxBackupPoints: 400
+pubSubEnabled: false
 
 bucketName:
 gcsMountPath: "/etc/gcs"
