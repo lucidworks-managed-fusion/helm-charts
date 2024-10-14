@@ -109,7 +109,7 @@ data:
     <solr>
 
       <int name="maxBooleanClauses">${solr.max.booleanClauses:1024}</int>
-      <str name="sharedLib">${solr.sharedLib:},${solr.install.dir}/contrib/gcs-repository/lib</str>
+      <str name="sharedLib">${solr.install.dir}/contrib/gcs-repository/lib,${solr.install.dir}/dist</str>
       <str name="modules">${solr.modules:}</str>
       <str name="allowPaths">${solr.allowPaths:}</str>
       <str name="allowUrls">${solr.allowUrls:}</str>
@@ -155,7 +155,7 @@ data:
       <backup>
         <repository name="gcs_backup" class="org.apache.solr.gcs.GCSBackupRepository" default="false">
           <str name="gcsBucket">{{ .Values.bucketName }}</str>
-          <str name="gcsCredentialPath">{{ .Values.gcsMountPath | default "/etc/gcs" }}</str>
+          <str name="gcsCredentialPath">{{ .Values.gcsMountPath | default "/etc/gcs" }}/cloud</str>
           <str name="location">environments</str>
           <int name="gcsClientMaxRetries">5</int>
           <int name="gcsClientHttpInitialHttpDelayMillis">1500</int>
