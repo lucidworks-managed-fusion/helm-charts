@@ -5,9 +5,14 @@ metadata:
   labels:
     {{- include "phantom-replica-service.labels" . | nindent 4 }}
 spec:
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 1
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 300
   schedule: {{ .Values.cronjob.schedule | quote }}
   jobTemplate:
     spec:
+      ttlSecondsAfterFinished: 60
       template:
         spec:
           serviceAccountName: phantom-replica-service-account
@@ -31,3 +36,5 @@ spec:
                 - name: "PHANTOMREPLICASERVICE_OLDERTHANDAYS"
                   value: {{ .Values.cronjob.olderThanDays | quote }}
           restartPolicy: OnFailure
+          nodeSelector:
+            fusion_node_type: system
