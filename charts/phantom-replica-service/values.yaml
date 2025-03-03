@@ -1,0 +1,18 @@
+# Default values for Phantom Replica Service.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+cronjob:
+  schedule: "0 0 * * *"
+  customerId: "test"
+  delete: true
+  olderThanDays: 1
+  image:
+    name: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images/phantom-replica-service
+    pullPolicy: Always
+    tag: latest
+
+imagePullSecrets:
+  - name: gcr-managed-fusion
+nameOverride: ""
+fullnameOverride: ""

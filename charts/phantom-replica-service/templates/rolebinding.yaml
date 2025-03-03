@@ -1,0 +1,11 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: phantom-replica-service-rolebinding
+subjects:
+  - kind: ServiceAccount
+    name: phantom-replica-service-account
+roleRef:
+  kind: Role
+  name: phantom-replica-service-role
+  apiGroup: rbac.authorization.k8s.io
