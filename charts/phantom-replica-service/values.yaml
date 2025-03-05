@@ -4,13 +4,12 @@
 
 cronjob:
   schedule: "0 0 * * *"
-  customerId: "test"
   delete: true
   olderThanDays: 1
   image:
     name: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images/phantom-replica-service
     pullPolicy: Always
-    tag: latest
+    tag: 0.2.1
 
 imagePullSecrets:
   - name: gcr-managed-fusion

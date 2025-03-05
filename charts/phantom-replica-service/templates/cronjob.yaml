@@ -25,8 +25,6 @@ spec:
               image: {{ .Values.cronjob.image.name }}:{{ .Values.cronjob.image.tag }}
               imagePullPolicy: {{ .Values.cronjob.image.pullPolicy }}
               env:
-                - name: "PHANTOMREPLICASERVICE_CUSTOMERID"
-                  value: {{ .Values.cronjob.customerId }}
                 - name: "PHANTOMREPLICASERVICE_NAMESPACE"
                   valueFrom:
                     fieldRef:
