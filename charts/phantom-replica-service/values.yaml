@@ -9,7 +9,7 @@ cronjob:
   image:
     name: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images/phantom-replica-service
     pullPolicy: Always
-    tag: 0.2.1
+    tag: 0.2.2
 
 imagePullSecrets:
   - name: gcr-managed-fusion
