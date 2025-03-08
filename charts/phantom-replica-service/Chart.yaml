@@ -1,5 +1,5 @@
 apiVersion: v2
-appVersion: 0.2.1
+appVersion: 0.2.2
 description: Helm chart for deploying the Phantom Replica Service
 home: https://github.com/lucidworks-managed-fusion/phantom-replica-deleter
 keywords:

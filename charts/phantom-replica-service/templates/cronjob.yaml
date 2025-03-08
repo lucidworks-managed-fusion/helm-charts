@@ -35,4 +35,4 @@ spec:
                   value: {{ .Values.cronjob.olderThanDays | quote }}
           restartPolicy: OnFailure
           nodeSelector:
-            fusion_node_type: system
+            type: standard
