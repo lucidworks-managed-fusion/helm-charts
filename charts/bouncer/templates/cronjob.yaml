@@ -30,4 +30,8 @@ spec:
                   value: {{ .Values.cronjob.retries.number | quote }}
                 - name: "BOUNCER_RETRIES_WAITMINUTES"
                   value: {{ .Values.cronjob.retries.waitminutes | quote }}
+                - name: "BOUNCER_BOUNCE_JOB_LAUNCHER"
+                  value: {{ .Values.cronjob.bounce.job_launcher | quote }}
+                - name: "BOUNCER_BOUNCE_CLASSIC_REST_SERVICE"
+                  value: {{ .Values.cronjob.bounce.classic_rest_service | quote }}
           restartPolicy: OnFailure
