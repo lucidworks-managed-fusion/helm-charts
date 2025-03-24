@@ -4,10 +4,13 @@ cronjob:
   retries:
     number: "12"
     waitminutes: "5"
+  bounce:
+    job_launcher: "true"
+    classic_rest_service: "true"
   image:
     name: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images/bouncer
     pullPolicy: Always
-    tag: 1.0.0
+    tag: 1.1.0
 
 imagePullSecrets:
   - name: gcr-managed-fusion
