@@ -11,4 +11,4 @@ maintainers:
 name: bouncer
 sources:
   - https://github.com/lucidworks-managed-fusion/helm-charts.git
-version: 1.1.0
+version: 1.1.1
