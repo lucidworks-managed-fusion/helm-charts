@@ -14,4 +14,4 @@ name: phantom-replica-service
 sources:
   - https://github.com/lucidworks-managed-fusion/helm-charts.git
 type: application
-version: 1.0.0
+version: 1.0.1
