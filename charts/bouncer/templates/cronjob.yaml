@@ -34,4 +34,9 @@ spec:
                   value: {{ .Values.cronjob.bounce.job_launcher | quote }}
                 - name: "BOUNCER_BOUNCE_CLASSIC_REST_SERVICE"
                   value: {{ .Values.cronjob.bounce.classic_rest_service | quote }}
+                - name: "SERVICE_ACCOUNT_KEY"
+                  valueFrom:
+                    secretKeyRef:
+                      key: sa
+                      name: service-account-key
           restartPolicy: OnFailure
