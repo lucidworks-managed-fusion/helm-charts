@@ -2,6 +2,24 @@ apiVersion: v1
 entries:
   bouncer:
   - apiVersion: v1
+    appVersion: 1.2.0
+    created: "2025-04-21T18:11:32.3851695Z"
+    description: A Helm chart to deploy Bouncer
+    digest: 3dbc115430cd4652a88eb8ed30fb46e8bc7276aa8774c918c636733b02451d75
+    home: https://github.com/lucidworks-managed-fusion/cloud-engineering-tooling
+    keywords:
+    - bouncer
+    maintainers:
+    - email: randy.gettman@lucidworks.com
+      name: Randy Gettman
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: bouncer
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/bouncer-1.2.0/bouncer-1.2.0.tgz
+    version: 1.2.0
+  - apiVersion: v1
     appVersion: 1.1.0
     created: "2025-03-28T22:04:20.061934975Z"
     description: A Helm chart to deploy Bouncer
@@ -882,4 +900,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2025-03-28T22:04:20.062072411Z"
+generated: "2025-04-21T18:11:32.385294963Z"
