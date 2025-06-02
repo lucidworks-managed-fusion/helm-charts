@@ -21,6 +21,10 @@ data:
     }
 
     function create_pd_event(){
+        if [ "$CREATE_PAGER_DUTY_EVENTS" != "true" ] ; then
+            echo "PagerDuty events creation is disabled, skipping event creation" >&2
+            return 0
+        fi
         typeset var local ROUTING_KEY="$1"
         typeset var local EVENT_ACTION="trigger"
         typeset var local SEVERITY="critical"

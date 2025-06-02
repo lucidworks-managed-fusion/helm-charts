@@ -46,6 +46,8 @@ spec:
                   value: {{ .Values.clusterType }}
                 - name: NAMESPACE
                   value: {{ template "fusion-replication-check.namespace" . }}
+                - name: CREATE_PAGER_DUTY_EVENTS
+                  value: {{ .Values.createPagerDutyEvents | quote }}
                 - name: REPLICATION_ROUTING_KEY
                   value: {{ .Values.replicationRoutingKey | quote }}
                 - name: TIMEOUT_ROUTING_KEY

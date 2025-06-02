@@ -70,6 +70,7 @@ clusterName: ""
 clusterType: ""
 replicationRoutingKey: ""
 timeoutRoutingKey: ""
+createPagerDutyEvents: false
 
 getSnapshot: false
 getLogs: false
