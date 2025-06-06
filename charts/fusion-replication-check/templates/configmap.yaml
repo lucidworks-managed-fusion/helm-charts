@@ -783,11 +783,11 @@ data:
       \$shards.value.replicas | to_entries | .[] as \$replicas |
       (if \$replicas.value.leader != null then \"true\" else \"false\" end) as \$isLeader | 
       { 
-        collection: \$replicas.value.collection, 
+        collection: \$parent.key, 
         shard: \$shards.key, 
         type: \$replicas.value.type, 
         state: \$replicas.value.state, 
-        replica: \$replicas.value.core_node_name, 
+        replica: \$replicas.key, 
         core: \$replicas.value.core, 
         node_name: \$replicas.value.node_name, 
         base_url: \$replicas.value.base_url, leader: \$isLeader
