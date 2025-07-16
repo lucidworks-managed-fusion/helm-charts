@@ -9,10 +9,6 @@ metadata:
     {{- toYaml . | nindent 4 }}
     {{- end }}
   annotations:
-    {{- if .Values.featureFlags.enabled }}
-    openfeature.dev/enabled: "true"
-    openfeature.dev/featureflagsource: "{{ .Chart.Name }}-flags"
-    {{- end }}
     {{- with .Values.annotations }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
@@ -23,6 +19,14 @@ spec:
       {{- include "collection-backups.labels" . | nindent 6 }}
   template:
     metadata:
+      annotations:
+        {{- if .Values.featureFlags.enabled }}
+        openfeature.dev/enabled: "true"
+        openfeature.dev/featureflagsource: "{{ .Chart.Name }}-flags"
+        {{- end }}
+      {{- with .Values.annotations }}
+      {{- toYaml . | nindent 8 }}
+      {{- end }}
       labels:
         {{- include "collection-backups.labels" . | nindent 8 }}
     spec:
