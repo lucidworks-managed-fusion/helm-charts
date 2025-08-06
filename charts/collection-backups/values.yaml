@@ -23,19 +23,7 @@ solrXml:
   xmlFile: ""
 
 image:
-  repository: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images
+  repository: us-docker.pkg.dev/managed-fusion/engineering-tooling-images
   name: collection-backups
-  tag: 1.4.0
+  tag: 1.3.0
   pullPolicy: Always
-
-featureFlags:
-  enabled: true  # Enable/disable all feature flags for this service
-  flags:
-    - name: backup.skip-backups # naming convention: <feature>.<attribute>
-      description: "Skips backups regardless of the schedule"
-      owner: "derek"
-      state: "ENABLED" # or "DISABLED"
-      defaultVariant: false
-      variants: # for boolean flags
-        true: true
-        false: false

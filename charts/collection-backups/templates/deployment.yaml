@@ -20,10 +20,6 @@ spec:
   template:
     metadata:
       annotations:
-        {{- if .Values.featureFlags.enabled }}
-        openfeature.dev/enabled: "true"
-        openfeature.dev/featureflagsource: "{{ .Chart.Name }}-flags"
-        {{- end }}
       {{- with .Values.annotations }}
       {{- toYaml . | nindent 8 }}
       {{- end }}
