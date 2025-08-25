@@ -1,0 +1,18 @@
+replicaCount: 1
+image:
+  repository: us-central1-docker.pkg.dev/managed-fusion/lw-solr-prom-exporter/exporter:latest
+  pullPolicy: Always
+prometheus:
+  scrape: "true"
+  path: "/metrics"
+  port: "8080"
+exporterConfig: "None"
+nameOverride: "prom-exporter-app"
+fullnameOverride: "prom-exporter"
+podAnnotations: {}
+podSecurityContext: {}
+securityContext: {}
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}
