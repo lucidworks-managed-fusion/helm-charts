@@ -1,0 +1,12 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fusion-metadata-agent-binding
+subjects:
+  - kind: ServiceAccount
+    name: fusion-metadata-agent
+    namespace: {{ template "metadata-agent.namespace" . }}
+roleRef:
+  kind: ClusterRole
+  name: fusion-metadata-agent-role
+  apiGroup: rbac.authorization.k8s.io

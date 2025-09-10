@@ -1,0 +1,25 @@
+customerId: "3f923335-f2e1-4ced-ad64-4000541732db"
+#integratedSystemId: "7b59f23e-20bc-4944-acd1-ac37d6f8b4c2"
+gatherSchedule: "0 */3 * ? * *"
+publishSchedule: "0 */3 * ? * *"
+
+api:
+#  Production URLs
+#  authUrl: "https://identity.lucidworks.com/oauth2/ausao8uveaPmyhv0v357/v1/token?scope=managedfusionops&grant_type=client_credentials"
+#  baseUrl: "https://internal.lucidworks.com/api"
+#  Development URLs
+  authUrl: "https://identity-dev.lucidworks.com/oauth2/auszck3abcZBc6dZV1d6/v1/token?scope=managedfusionops&grant_type=client_credentials"
+  baseUrl: "https://internal.lucidworks.dev/api"
+
+image:
+  repository: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images
+  name: fusion-metadata-agent
+  tag: 0.1.0
+  pullPolicy: Always
+
+nodeSelector: {}
+securityContext: {}
+annotations: {}
+labels: {}
+imagePullSecrets:
+  - name: gcr-managed-fusion
