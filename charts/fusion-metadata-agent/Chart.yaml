@@ -13,4 +13,4 @@ maintainers:
 name: fusion-metadata-agent
 sources:
   - https://github.com/lucidworks-managed-fusion/helm-charts.git
-version: 0.1.0
+version: 0.1.1
