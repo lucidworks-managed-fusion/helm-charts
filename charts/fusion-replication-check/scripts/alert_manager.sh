@@ -99,7 +99,7 @@ if [ ${CURRENT[1]} -ne 0 ] ; then
         if [ "$GET_SNAPSHOT" == "true" ]; then
             echo "Taking environment snapshot..."
             echo "GET current" | $REDIS_CMD > ${RESULTS_DIR}/${SNAPSHOT_DIR}/replication_errors.json
-            $COMMONS_DIR/snapshot.sh $NAMESPACE $SNAPSHOT_DIR
+            $COMMONS_DIR/snapshot.sh $NAMESPACE ${RESULTS_DIR}/$SNAPSHOT_DIR
         fi
 
         if [ "$GET_LOGS" == "true" ] ; then
