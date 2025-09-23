@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "fusion-replication-check.labels" . | nindent 4 }}
 rules:
-  - apiGroups: ["solr.apache.org", "solr.lucidworks.com", "autoscaling"]
+  - apiGroups: ["solr.apache.org", "solr.lucidworks.com", "autoscaling", "ray.io"]
     resources:
       - pods
       - pods/log
@@ -16,6 +16,9 @@ rules:
       - solrclouds
       - solrscalings
       - horizontalpodautoscalers
+      - rayclusters
+      - rayjobs
+      - rayservices
     verbs:
       - get
       - list
