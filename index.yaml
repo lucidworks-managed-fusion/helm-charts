@@ -76,6 +76,31 @@ entries:
   collection-backups:
   - apiVersion: v1
     appVersion: 1.0.0
+    created: "2025-10-08T14:40:07.085286755Z"
+    description: A Helm chart to deploy fusion collection backups
+    digest: 5fd7596acd8d2b6ac7d30c8d09f940f8d1d91160ff8636affcc2e73ddb176d26
+    home: https://github.com/lucidworks-managed-fusion/collection-backups.git
+    keywords:
+    - fusion
+    - collections
+    - solr
+    - lucidworks
+    - collection
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    - email: derek.adams@lucidworks.com
+      name: Derek Adams
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: collection-backups
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/collection-backups-0.5.0/collection-backups-0.5.0.tgz
+    version: 0.5.0
+  - apiVersion: v1
+    appVersion: 1.0.0
     created: "2025-08-06T14:22:01.646603922Z"
     description: A Helm chart to deploy fusion collection backups
     digest: a4cdc35f3c01fc5d641b8c33657d635102a32137205fa795f7637c50f7dacb7b
@@ -1097,4 +1122,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2025-09-23T17:29:58.778388898Z"
+generated: "2025-10-08T14:40:07.085547641Z"
