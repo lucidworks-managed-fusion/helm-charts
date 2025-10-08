@@ -3,10 +3,10 @@
 # Declare variables to be passed into your templates.
 
 image:
-  repository: bitnami/kubectl
+  repository: us-docker.pkg.dev/managed-fusion/managed-fusion-images/kubectl
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: ""
+  tag: 1.31-debian-12
 
 imagePullSecrets: []
 nameOverride: ""
