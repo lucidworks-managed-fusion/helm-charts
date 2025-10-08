@@ -26,6 +26,7 @@ spec:
       labels:
         {{- include "collection-backups.labels" . | nindent 8 }}
     spec:
+      serviceAccountName: {{ include "collection-backups.serviceAccountName" . }}
       securityContext:
           {{- toYaml .Values.securityContext | nindent 8 }}
           {{- with .Values.nodeSelector }}
@@ -50,7 +51,11 @@ spec:
             - name: BACKUP_BUCKET_ROOT_FOLDER
               value: environments
             - name: BACKUP_GCS_CREDENTIALS_PATH
+              {{- if .Values.serviceAccount.useWorkloadIdentity }}
+              value: ""
+              {{- else }}
               value: {{ .Values.gcsMountPath | default "/etc/gcs" }}/cloud
+              {{- end }}
             - name: BACKUP_CUSTOMER_ID
               value: {{ template "collection-backups.customerId" . }}
             - name: BACKUP_CRON_EXPRESSION
@@ -61,11 +66,15 @@ spec:
               value: {{ quote .Values.maxBackupPoints }}
             - name: BACKUP_PUB_SUB_ENABLED
               value: {{ quote .Values.pubSubEnabled }}
+          {{- if not .Values.serviceAccount.useWorkloadIdentity }}
           volumeMounts:
             - name: gcs-credentials
               mountPath: {{ .Values.gcsMountPath | default "/etc/gcs" | quote }}
               readOnly: true
+          {{- end }}
+      {{- if not .Values.serviceAccount.useWorkloadIdentity }}
       volumes:
         - name: gcs-credentials
           secret:
             secretName: collection-backup-sa
+      {{- end }}

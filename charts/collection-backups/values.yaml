@@ -12,6 +12,23 @@ excludedCollections: "system_logs"
 secretName:
 secretCloud:
 
+# Service Account configuration
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  # If not set and create is false, defaults to "default"
+  name: ""
+  # Annotations to add to the service account (e.g., for Workload Identity)
+  # Example for GKE Workload Identity:
+  # annotations:
+  #   iam.gke.io/gcp-service-account: my-gcp-sa@project.iam.gserviceaccount.com
+  annotations: {}
+  # Use Workload Identity instead of JSON key secret
+  # When true, secret volume mount is disabled and BACKUP_GCS_CREDENTIALS_PATH is set to empty
+  useWorkloadIdentity: false
+
 nodeSelector: {}
 securityContext: {}
 annotations: {}
