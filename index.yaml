@@ -1055,6 +1055,28 @@ entries:
   spark-pod-cleaner:
   - apiVersion: v2
     appVersion: 1.27.4
+    created: "2025-10-08T18:27:06.517877265Z"
+    description: A Helm chart for Kubernetes
+    digest: f1fb08fd331b29188532c1be6223ce32cd296404f6368bf8bca8e489194dd90a
+    home: https://github.com/lucidworks-managed-fusion/spark-pod-cleaner.git
+    keywords:
+    - fusion
+    - pod
+    - cleaner
+    - lucidworks
+    maintainers:
+    - email: irepan.chavez@lucidworks.com
+      name: Irepan Chavez
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: spark-pod-cleaner
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    type: application
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/spark-pod-cleaner-0.2.0/spark-pod-cleaner-0.2.0.tgz
+    version: 0.2.0
+  - apiVersion: v2
+    appVersion: 1.27.4
     created: "2023-08-11T16:10:23.085401706Z"
     description: A Helm chart for Kubernetes
     digest: 3ddbbd89dc52826877d20a3fb24e45c1393bdcc62cf0224e9717c87b7e05fa01
@@ -1122,4 +1144,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2025-10-08T14:40:07.085547641Z"
+generated: "2025-10-08T18:27:06.518114269Z"
