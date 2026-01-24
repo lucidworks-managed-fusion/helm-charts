@@ -6,6 +6,9 @@ cronjob:
   schedule: "0 0 * * *"
   delete: true
   olderThanDays: 1
+  pigDirs:
+    delete: false
+    olderThanDays: false
   image:
     name: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images/phantom-replica-service
     pullPolicy: Always
