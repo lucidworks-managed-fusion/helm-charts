@@ -8,11 +8,11 @@ cronjob:
   olderThanDays: 1
   pigDirs:
     delete: false
-    olderThanDays: false
+    olderThanDays: 1
   image:
     name: us-west1-docker.pkg.dev/managed-fusion/cloud-support/images/phantom-replica-service
     pullPolicy: Always
-    tag: 0.2.2
+    tag: 0.3.0
 
 imagePullSecrets:
   - name: gcr-managed-fusion
