@@ -1,11 +1,12 @@
 apiVersion: v2
-appVersion: 0.2.2
+appVersion: 0.3.0
 description: Helm chart for deploying the Phantom Replica Service
 home: https://github.com/lucidworks-managed-fusion/phantom-replica-deleter
 keywords:
   - phantom
   - replica
   - solr
+  - pig
 maintainers:
   - email: randy.gettman@lucidworks.com
     name: Randy Gettman
@@ -14,4 +15,4 @@ name: phantom-replica-service
 sources:
   - https://github.com/lucidworks-managed-fusion/helm-charts.git
 type: application
-version: 1.0.1
+version: 1.0.2

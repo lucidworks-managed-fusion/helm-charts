@@ -33,6 +33,10 @@ spec:
                   value: {{ .Values.cronjob.delete | quote }}
                 - name: "PHANTOMREPLICASERVICE_OLDERTHANDAYS"
                   value: {{ .Values.cronjob.olderThanDays | quote }}
+                - name: "PHANTOMREPLICASERVICE_PIGDIRS_DELETE"
+                  value: {{ .Values.cronjob.pigDirs.delete | quote }}
+                - name: "PHANTOMREPLICASERVICE_PIGDIRS_OLDERTHANDAYS"
+                  value: {{ .Values.cronjob.pigDirs.olderThanDays | quote }}
           restartPolicy: OnFailure
           nodeSelector:
             type: standard
