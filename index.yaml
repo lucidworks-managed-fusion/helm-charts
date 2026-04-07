@@ -993,6 +993,28 @@ entries:
     version: 0.1.0
   phantom-replica-service:
   - apiVersion: v2
+    appVersion: 0.3.3
+    created: "2026-04-07T20:36:13.950554178Z"
+    description: Helm chart for deploying the Phantom Replica Service
+    digest: 7177c01e6f41255acb0999b682c0605b4e0a107c3b44817c83c1ef038c2919b1
+    home: https://github.com/lucidworks-managed-fusion/phantom-replica-deleter
+    keywords:
+    - phantom
+    - replica
+    - solr
+    - pig
+    maintainers:
+    - email: randy.gettman@lucidworks.com
+      name: Randy Gettman
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: phantom-replica-service
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    type: application
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/phantom-replica-service-1.0.5/phantom-replica-service-1.0.5.tgz
+    version: 1.0.5
+  - apiVersion: v2
     appVersion: 0.3.2
     created: "2026-03-17T20:18:35.814587156Z"
     description: Helm chart for deploying the Phantom Replica Service
@@ -1210,4 +1232,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2026-03-17T20:18:35.814784197Z"
+generated: "2026-04-07T20:36:13.950759511Z"
