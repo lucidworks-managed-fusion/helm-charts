@@ -9,3 +9,7 @@ rules:
   - apiGroups: [""]
     resources: ["pods/exec"]
     verbs: ["create", "get"]
+  # SRCH-808: write per-run report to ConfigMap "prs-last-run" for fleet-wide aggregation.
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["get", "create", "update", "patch"]
