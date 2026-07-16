@@ -1,0 +1,18 @@
+apiVersion: v1
+appVersion: 0.1.0
+description: A Helm chart to deploy the Fusion datasource job-status monitor/exporter
+home: https://github.com/lucidworks-managed-fusion/cloud-engineering-tooling.git
+keywords:
+  - fusion
+  - datasource
+  - solr
+  - lucidworks
+  - monitoring
+maintainers:
+  - email: duane.rackley@lucidworks.com
+    name: Duane Rackley
+    url: https://github.com/lucidworks-managed-fusion/helm-charts
+name: fusion-datasource-monitor
+sources:
+  - https://github.com/lucidworks-managed-fusion/helm-charts.git
+version: 0.1.0

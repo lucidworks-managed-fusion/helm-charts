@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "fusion-datasource-monitor.fullname" . }}
+  namespace: {{ template "fusion-datasource-monitor.namespace" . }}
+  labels:
+    {{- include "fusion-datasource-monitor.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    {{- with .Values.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "fusion-datasource-monitor.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+      {{- with .Values.annotations }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "fusion-datasource-monitor.labels" . | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "fusion-datasource-monitor.serviceAccountName" . }}
+      securityContext:
+          {{- toYaml .Values.securityContext | nindent 8 }}
+          {{- with .Values.nodeSelector }}
+      nodeSelector:
+          {{- toYaml . | nindent 8 }}
+          {{- end }}
+          {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+            {{- toYaml . | nindent 8 }}
+          {{- end }}
+      containers:
+        - name: fusion-datasource-monitor
+          image: "{{ .Values.image.repository }}/{{ .Values.image.name }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: FUSION_APP_NAME
+              value: {{ template "fusion-datasource-monitor.appName" . }}
+            - name: DATASOURCE_MONITOR_ZK_HOST
+              value: {{ template "fusion-datasource-monitor.zookeeperHost" . }}
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}

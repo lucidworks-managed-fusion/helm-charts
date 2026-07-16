@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "fusion-datasource-monitor.fullname" . }}
+  namespace: {{ template "fusion-datasource-monitor.namespace" . }}
+  annotations:
+    prometheus.io/path: "/actuator/prometheus"
+    prometheus.io/port: "8080"
+    prometheus.io/scrape: "true"
+spec:
+  selector:
+    {{- include "fusion-datasource-monitor.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
