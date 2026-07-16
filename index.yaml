@@ -860,6 +860,29 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-basistech-0.0.1/fusion-basistech-0.0.1.tgz
     version: 0.0.1
+  fusion-datasource-monitor:
+  - apiVersion: v1
+    appVersion: 0.1.0
+    created: "2026-07-16T14:52:52.815625122Z"
+    description: A Helm chart to deploy the Fusion datasource job-status monitor/exporter
+    digest: 8c7aba62c60102fddb08b737ba6bd73eb5aeaa660dc2ff99529fb2f8d315f4a6
+    home: https://github.com/lucidworks-managed-fusion/cloud-engineering-tooling.git
+    keywords:
+    - fusion
+    - datasource
+    - solr
+    - lucidworks
+    - monitoring
+    maintainers:
+    - email: duane.rackley@lucidworks.com
+      name: Duane Rackley
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: fusion-datasource-monitor
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-datasource-monitor-0.1.0/fusion-datasource-monitor-0.1.0.tgz
+    version: 0.1.0
   fusion-replication-check:
   - apiVersion: v2
     appVersion: 1.27.4
@@ -1254,4 +1277,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2026-05-04T11:02:32.708536628Z"
+generated: "2026-07-16T14:52:52.815755096Z"
