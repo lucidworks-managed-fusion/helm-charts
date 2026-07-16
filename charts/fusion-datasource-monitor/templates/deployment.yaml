@@ -16,7 +16,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "fusion-datasource-monitor.labels" . | nindent 6 }}
+      {{- include "fusion-datasource-monitor.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       annotations:

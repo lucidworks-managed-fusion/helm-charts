@@ -9,7 +9,7 @@ metadata:
     prometheus.io/scrape: "true"
 spec:
   selector:
-    {{- include "fusion-datasource-monitor.labels" . | nindent 4 }}
+    {{- include "fusion-datasource-monitor.selectorLabels" . | nindent 4 }}
   ports:
     - name: http
       protocol: TCP

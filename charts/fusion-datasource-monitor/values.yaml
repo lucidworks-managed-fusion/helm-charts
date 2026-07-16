@@ -8,10 +8,15 @@ zookeeperHost:
 appName:
 
 # solr.collection, solr.connect-timeout-secs, and poll.fixed-delay-ms are NOT exposed here -
-# DatasourceMonitorSettings only binds zk-host/namespace/app to env vars
-# (DATASOURCE_MONITOR_ZK_HOST/POD_NAMESPACE/FUSION_APP_NAME); the other properties are
-# hardcoded in application.properties with no env var override today. Exposing chart values
-# for them would be misleading until the app itself supports overriding them.
+# this chart's deployment.yaml only wires zk-host/namespace/app through to env vars
+# (DATASOURCE_MONITOR_ZK_HOST/POD_NAMESPACE/FUSION_APP_NAME), with no extraEnv/passthrough
+# mechanism for the others. Exposing chart values for them would be misleading until the
+# chart itself adds that wiring.
+#
+# Deployment topology: this chart deploys one pod per Fusion namespace (not a central
+# per-cluster poller) - a deliberate decision, not a default. See
+# https://github.com/lucidworks-managed-fusion/cloud-engineering-tooling/pull/147 for the
+# rationale (the exporter's Java runtime only supports one ZK host/namespace per process).
 
 nodeSelector: {}
 securityContext: {}
