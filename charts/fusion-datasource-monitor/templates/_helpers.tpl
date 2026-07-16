@@ -81,7 +81,11 @@ release: {{ .Release.Name }}
 Create the name of the service account to use
 */}}
 {{- define "fusion-datasource-monitor.serviceAccountName" -}}
+{{- if .Values.serviceAccount.create -}}
   {{ default (include "fusion-datasource-monitor.fullname" .) .Values.serviceAccount.name }}
+{{- else -}}
+  {{ default "default" .Values.serviceAccount.name }}
+{{- end -}}
 {{- end -}}
 
 {{/*
