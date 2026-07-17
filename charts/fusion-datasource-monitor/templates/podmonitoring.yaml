@@ -1,0 +1,25 @@
+apiVersion: monitoring.googleapis.com/v1
+kind: PodMonitoring
+metadata:
+  name: {{ template "fusion-datasource-monitor.fullname" . }}
+  namespace: {{ template "fusion-datasource-monitor.namespace" . }}
+  labels:
+    {{- include "fusion-datasource-monitor.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "fusion-datasource-monitor.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 30s
+      metricRelabeling:
+        - action: keep
+          sourceLabels: ["__name__"]
+          regex: fusion_datasource_job_(last_status|runs_total|last_run_timestamp)
+  targetLabels:
+    metadata:
+      - pod
+      - container
+      - top_level_controller_name
+      - top_level_controller_type
