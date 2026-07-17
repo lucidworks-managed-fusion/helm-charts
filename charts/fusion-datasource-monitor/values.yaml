@@ -48,3 +48,22 @@ image:
   name: fusion-datasource-monitor
   tag: 0.1.0
   pullPolicy: Always
+
+# Namespaced GMP Rules (PrometheusRule-equivalent) alerting over this exporter's metrics
+# (SRCH-895). Off by default - the thresholds below are provisional defaults from
+# Meychele's PRIN-1018 note, not yet product-confirmed per customer (see SRCH-902 for
+# Amex's). Override per-customer in that customer's own values file rather than editing
+# this chart, since different customers may confirm different thresholds.
+alerts:
+  enabled: false
+  ops:
+    failureCount: 2
+    failureWindow: 48h
+    # Same threshold as failureWindow, expressed in seconds - required because GMP/Prometheus
+    # duration literals (e.g. "24h") are only valid inside a range vector selector ([24h]),
+    # not in a scalar comparison like `time() - x > N`.
+    staleWindowSeconds: 86400 # 24h
+  client:
+    failureCount: 4
+    failureWindow: 8d
+    staleWindowSeconds: 259200 # 72h

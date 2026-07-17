@@ -1,0 +1,70 @@
+{{- if .Values.alerts.enabled }}
+apiVersion: monitoring.googleapis.com/v1
+kind: Rules
+metadata:
+  name: {{ template "fusion-datasource-monitor.fullname" . }}
+  namespace: {{ template "fusion-datasource-monitor.namespace" . }}
+  labels:
+    {{- include "fusion-datasource-monitor.labels" . | nindent 4 }}
+spec:
+  groups:
+    - name: fusion-datasource-monitor-alerts
+      rules:
+        - alert: FusionDatasourceJobFailed
+          expr: |
+            (
+              increase(fusion_datasource_job_runs_total{status="FAILED"}[{{ .Values.alerts.ops.failureWindow }}]) >= {{ .Values.alerts.ops.failureCount }}
+            )
+            and
+            (
+              increase(fusion_datasource_job_runs_total{status="SUCCESS"}[{{ .Values.alerts.ops.failureWindow }}]) == 0
+            )
+          for: 5m
+          labels:
+            severity: warning
+            routing_tier: ops
+            customer: '{{`{{ $labels.namespace }}`}}'
+          annotations:
+            summary: "Fusion datasource {{`{{ $labels.datasource }}`}} has failed repeatedly"
+            description: "Datasource {{`{{ $labels.datasource }}`}} has at least {{ .Values.alerts.ops.failureCount }} failed runs and no successful run in the last {{ .Values.alerts.ops.failureWindow }}. Auto-resolves on the next successful run."
+
+        - alert: FusionDatasourceJobFailedSustained
+          expr: |
+            (
+              increase(fusion_datasource_job_runs_total{status="FAILED"}[{{ .Values.alerts.client.failureWindow }}]) >= {{ .Values.alerts.client.failureCount }}
+            )
+            and
+            (
+              increase(fusion_datasource_job_runs_total{status="SUCCESS"}[{{ .Values.alerts.client.failureWindow }}]) == 0
+            )
+          for: 5m
+          labels:
+            severity: critical
+            routing_tier: client
+            customer: '{{`{{ $labels.namespace }}`}}'
+          annotations:
+            summary: "Fusion datasource {{`{{ $labels.datasource }}`}} has failed repeatedly (sustained)"
+            description: "Datasource {{`{{ $labels.datasource }}`}} has at least {{ .Values.alerts.client.failureCount }} failed runs and no successful run in the last {{ .Values.alerts.client.failureWindow }}. Escalated to the client tier. Auto-resolves on the next successful run."
+
+        - alert: FusionDatasourceJobStale
+          expr: time() - fusion_datasource_job_last_run_timestamp > {{ .Values.alerts.ops.staleWindowSeconds }}
+          for: 5m
+          labels:
+            severity: warning
+            routing_tier: ops
+            customer: '{{`{{ $labels.namespace }}`}}'
+          annotations:
+            summary: "Fusion datasource {{`{{ $labels.datasource }}`}} has not run recently"
+            description: "Datasource {{`{{ $labels.datasource }}`}} has no recorded run (successful or failed) in over {{ .Values.alerts.ops.staleWindowSeconds }}s - it may have stopped being scheduled, or may never have run at all."
+
+        - alert: FusionDatasourceJobStaleSustained
+          expr: time() - fusion_datasource_job_last_run_timestamp > {{ .Values.alerts.client.staleWindowSeconds }}
+          for: 5m
+          labels:
+            severity: critical
+            routing_tier: client
+            customer: '{{`{{ $labels.namespace }}`}}'
+          annotations:
+            summary: "Fusion datasource {{`{{ $labels.datasource }}`}} has not run in over {{ .Values.alerts.client.staleWindowSeconds }}s"
+            description: "Datasource {{`{{ $labels.datasource }}`}} has no recorded run (successful or failed) in over {{ .Values.alerts.client.staleWindowSeconds }}s. Escalated to the client tier."
+{{- end }}
