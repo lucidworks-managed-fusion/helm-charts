@@ -863,6 +863,28 @@ entries:
   fusion-datasource-monitor:
   - apiVersion: v1
     appVersion: 0.1.0
+    created: "2026-07-17T18:53:40.893203009Z"
+    description: A Helm chart to deploy the Fusion datasource job-status monitor/exporter
+    digest: 06ce7d5485cc6e65de586af0d13cfdf609d4b933545dc0cf5dce132415c22194
+    home: https://github.com/lucidworks-managed-fusion/cloud-engineering-tooling.git
+    keywords:
+    - fusion
+    - datasource
+    - solr
+    - lucidworks
+    - monitoring
+    maintainers:
+    - email: duane.rackley@lucidworks.com
+      name: Duane Rackley
+      url: https://github.com/lucidworks-managed-fusion/helm-charts
+    name: fusion-datasource-monitor
+    sources:
+    - https://github.com/lucidworks-managed-fusion/helm-charts.git
+    urls:
+    - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/fusion-datasource-monitor-0.1.4/fusion-datasource-monitor-0.1.4.tgz
+    version: 0.1.4
+  - apiVersion: v1
+    appVersion: 0.1.0
     created: "2026-07-17T17:53:55.789993953Z"
     description: A Helm chart to deploy the Fusion datasource job-status monitor/exporter
     digest: 91ad6eb69e646d74d273cd75f5458843f43e32d87bb7799531543e4f27c5e9bb
@@ -1343,4 +1365,4 @@ entries:
     urls:
     - https://github.com/lucidworks-managed-fusion/helm-charts/releases/download/status-reader-0.1.0/status-reader-0.1.0.tgz
     version: 0.1.0
-generated: "2026-07-17T17:53:55.790128405Z"
+generated: "2026-07-17T18:53:40.893414946Z"
