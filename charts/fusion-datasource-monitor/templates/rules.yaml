@@ -9,6 +9,7 @@ metadata:
 spec:
   groups:
     - name: fusion-datasource-monitor-alerts
+      interval: 1m
       rules:
         - alert: FusionDatasourceJobFailed
           expr: |
