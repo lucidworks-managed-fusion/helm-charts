@@ -70,6 +70,15 @@ alerts:
   # kube context (gke_<project_id>_<location>_<cluster>) is NOT a value here - it's derived
   # automatically in templates/rules.yaml from labels GMP already attaches to every metric, so
   # there's nothing to configure per customer.
+  #
+  # Ceiling on staleness age - beyond this, a datasource is presumed decommissioned/chronic and
+  # stops appearing in either the critical or non-critical list entirely. Staleness alone has no
+  # natural upper bound (a datasource dead for months looks identical to one that just stopped
+  # yesterday), but a months/years-old gap is not a fresh, actionable problem - real data from
+  # Amex non-prod confirmed this: 38 datasources showed as "critical" purely from staleness, and
+  # every single one had been silent for 2+ weeks (most 30-90+ days, several years). First-
+  # iteration default, provisional like the other thresholds below, pending product confirmation.
+  staleMaxAgeSeconds: 1209600 # 14 days
   # Non-critical tier - included in a firing alert's message, does not trigger one on its own.
   ops:
     failureCount: 2
