@@ -55,12 +55,21 @@ image:
 # Amex's). Override per-customer in that customer's own values file rather than editing
 # this chart, since different customers may confirm different thresholds.
 #
-# Single alert per namespace (FusionDatasourceCriticalIssue), not per datasource: fires only
+# Single alert per namespace (FusionDatasourceJobCriticalIssue), not per datasource: fires only
 # when at least one datasource meets the `client` (critical) thresholds below; the message body
 # also lists any datasources that only meet the looser `ops` (non-critical) thresholds, so a
 # single notification carries the full picture instead of one alert per failing datasource.
 alerts:
   enabled: false
+  # Optional per-environment links embedded in the alert message, to speed up triage. Both blank
+  # by default - if unset, that line is simply omitted from the message rather than showing an
+  # empty value. These vary per customer AND per environment (prod vs non-prod have different
+  # hosts), so set them in that environment's own values file, not here.
+  fusionUrl: "" # e.g. "https://amex.b.lucidworks.cloud" - this environment's Fusion UI/API host
+  grafanaUrl: "" # e.g. "https://amex-internal-dashboard-prod.b.lucidworks.cloud" - Grafana host
+  # kube context (gke_<project_id>_<location>_<cluster>) is NOT a value here - it's derived
+  # automatically in templates/rules.yaml from labels GMP already attaches to every metric, so
+  # there's nothing to configure per customer.
   # Non-critical tier - included in a firing alert's message, does not trigger one on its own.
   ops:
     failureCount: 2
