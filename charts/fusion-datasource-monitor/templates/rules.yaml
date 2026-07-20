@@ -34,7 +34,13 @@ spec:
         # shipped in 0.1.3/0.1.4 had this same bug and could never fire, on any cluster - this
         # went unnoticed because live validation only ever exercised the Stale family, which
         # doesn't have this issue).
-        - alert: FusionDatasourceCriticalIssue
+        # Named FusionDatasourceJob* (not just "FusionDatasourceCriticalIssue") deliberately -
+        # the shared Alertmanager route (SRCH-896) matches `alertname: 'FusionDatasourceJob.*'`,
+        # an ANCHORED regex requiring the name to start with "FusionDatasourceJob". Anything else
+        # falls through to the default Rootly webhook receiver - the exact failure mode that
+        # caused the original incident this epic already had. Verify this route still matches
+        # before ever renaming this alert again.
+        - alert: FusionDatasourceJobCriticalIssue
           expr: |
             count by (namespace) (
               count by (namespace, datasource) (
