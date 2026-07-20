@@ -54,8 +54,14 @@ image:
 # Meychele's PRIN-1018 note, not yet product-confirmed per customer (see SRCH-902 for
 # Amex's). Override per-customer in that customer's own values file rather than editing
 # this chart, since different customers may confirm different thresholds.
+#
+# Single alert per namespace (FusionDatasourceCriticalIssue), not per datasource: fires only
+# when at least one datasource meets the `client` (critical) thresholds below; the message body
+# also lists any datasources that only meet the looser `ops` (non-critical) thresholds, so a
+# single notification carries the full picture instead of one alert per failing datasource.
 alerts:
   enabled: false
+  # Non-critical tier - included in a firing alert's message, does not trigger one on its own.
   ops:
     failureCount: 2
     failureWindow: 48h
@@ -63,6 +69,10 @@ alerts:
     # duration literals (e.g. "24h") are only valid inside a range vector selector ([24h]),
     # not in a scalar comparison like `time() - x > N`.
     staleWindowSeconds: 86400 # 24h
+  # Critical tier - at least one datasource meeting these thresholds is what actually fires
+  # and notifies (see templates/rules.yaml for why this alert's own `and` clauses need
+  # `on (namespace, datasource)` - a bare `and` between different `status` label values never
+  # matches in PromQL, a real bug in the original per-datasource design this replaced).
   client:
     failureCount: 4
     failureWindow: 8d
