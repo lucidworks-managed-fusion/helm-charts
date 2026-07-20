@@ -11,61 +11,55 @@ spec:
     - name: fusion-datasource-monitor-alerts
       interval: 1m
       rules:
-        - alert: FusionDatasourceJobFailed
+        # One alert per namespace (not per datasource, not per condition) - fires only when at
+        # least one datasource in the namespace is in a critical state. The message embeds both
+        # the critical datasources and any additional non-critical ones currently affected, so
+        # ops gets the full picture in a single notification instead of a flood of individual
+        # per-datasource alerts.
+        #
+        # "Critical" = sustained failure (>= client.failureCount failed runs, no success, in
+        # client.failureWindow) OR fully stale (no run at all in client.staleWindowSeconds).
+        # "Non-critical" = the same conditions at the looser ops thresholds, MINUS anything
+        # already counted as critical (so a datasource never appears in both lists).
+        #
+        # NOTE: annotations cannot reference each other (Prometheus's annotation template
+        # context has no access to sibling annotations - confirmed via promtool, not assumed),
+        # so the critical/non-critical detail is duplicated directly in `description` itself,
+        # since that's the field the shared Alertmanager Slack template actually renders.
+        #
+        # NOTE: `and on (namespace, datasource)` is required, not optional decoration - PromQL's
+        # `and`/`unless` match on the FULL label set by default, and the FAILED/SUCCESS sides of
+        # this comparison differ on `status`, so a bare `and` NEVER matches (confirmed via
+        # promtool: the original per-datasource FusionDatasourceJobFailed/FailedSustained alerts
+        # shipped in 0.1.3/0.1.4 had this same bug and could never fire, on any cluster - this
+        # went unnoticed because live validation only ever exercised the Stale family, which
+        # doesn't have this issue).
+        # Named FusionDatasourceJob* (not just "FusionDatasourceCriticalIssue") deliberately -
+        # the shared Alertmanager route (SRCH-896) matches `alertname: 'FusionDatasourceJob.*'`,
+        # an ANCHORED regex requiring the name to start with "FusionDatasourceJob". Anything else
+        # falls through to the default Rootly webhook receiver - the exact failure mode that
+        # caused the original incident this epic already had. Verify this route still matches
+        # before ever renaming this alert again.
+        - alert: FusionDatasourceJobCriticalIssue
           expr: |
-            (
-              increase(fusion_datasource_job_runs_total{status="FAILED"}[{{ .Values.alerts.ops.failureWindow }}]) >= {{ .Values.alerts.ops.failureCount }}
-            )
-            and
-            (
-              increase(fusion_datasource_job_runs_total{status="SUCCESS"}[{{ .Values.alerts.ops.failureWindow }}]) == 0
-            )
-          for: 5m
-          labels:
-            severity: warning
-            routing_tier: ops
-            customer: '{{`{{ $labels.namespace }}`}}'
-          annotations:
-            summary: "Fusion datasource {{`{{ $labels.datasource }}`}} has failed repeatedly"
-            description: "Datasource {{`{{ $labels.datasource }}`}} has at least {{ .Values.alerts.ops.failureCount }} failed runs and no successful run in the last {{ .Values.alerts.ops.failureWindow }}. Auto-resolves on the next successful run."
-
-        - alert: FusionDatasourceJobFailedSustained
-          expr: |
-            (
-              increase(fusion_datasource_job_runs_total{status="FAILED"}[{{ .Values.alerts.client.failureWindow }}]) >= {{ .Values.alerts.client.failureCount }}
-            )
-            and
-            (
-              increase(fusion_datasource_job_runs_total{status="SUCCESS"}[{{ .Values.alerts.client.failureWindow }}]) == 0
-            )
+            count by (namespace) (
+              count by (namespace, datasource) (
+                increase(fusion_datasource_job_runs_total{status="FAILED"}[{{ .Values.alerts.client.failureWindow }}]) >= {{ .Values.alerts.client.failureCount }}
+                and on (namespace, datasource)
+                increase(fusion_datasource_job_runs_total{status="SUCCESS"}[{{ .Values.alerts.client.failureWindow }}]) == 0
+              )
+              or
+              count by (namespace, datasource) (
+                time() - fusion_datasource_job_last_run_timestamp > {{ .Values.alerts.client.staleWindowSeconds }}
+              )
+            ) > 0
           for: 5m
           labels:
             severity: critical
-            routing_tier: client
             customer: '{{`{{ $labels.namespace }}`}}'
           annotations:
-            summary: "Fusion datasource {{`{{ $labels.datasource }}`}} has failed repeatedly (sustained)"
-            description: "Datasource {{`{{ $labels.datasource }}`}} has at least {{ .Values.alerts.client.failureCount }} failed runs and no successful run in the last {{ .Values.alerts.client.failureWindow }}. Escalated to the client tier. Auto-resolves on the next successful run."
-
-        - alert: FusionDatasourceJobStale
-          expr: time() - fusion_datasource_job_last_run_timestamp > {{ .Values.alerts.ops.staleWindowSeconds }}
-          for: 5m
-          labels:
-            severity: warning
-            routing_tier: ops
-            customer: '{{`{{ $labels.namespace }}`}}'
-          annotations:
-            summary: "Fusion datasource {{`{{ $labels.datasource }}`}} has not run recently"
-            description: "Datasource {{`{{ $labels.datasource }}`}} has no recorded run (successful or failed) in over {{ .Values.alerts.ops.staleWindowSeconds }}s - it may have stopped being scheduled, or may never have run at all."
-
-        - alert: FusionDatasourceJobStaleSustained
-          expr: time() - fusion_datasource_job_last_run_timestamp > {{ .Values.alerts.client.staleWindowSeconds }}
-          for: 5m
-          labels:
-            severity: critical
-            routing_tier: client
-            customer: '{{`{{ $labels.namespace }}`}}'
-          annotations:
-            summary: "Fusion datasource {{`{{ $labels.datasource }}`}} has not run in over {{ .Values.alerts.client.staleWindowSeconds }}s"
-            description: "Datasource {{`{{ $labels.datasource }}`}} has no recorded run (successful or failed) in over {{ .Values.alerts.client.staleWindowSeconds }}s. Escalated to the client tier."
+            summary: "{{`{{ $labels.namespace }}`}} has {{`{{ $value }}`}} datasource(s) in a critical state"
+            description: >-
+              {{`Critical: {{ range query (printf "count by (namespace, datasource) (increase(fusion_datasource_job_runs_total{status='FAILED', namespace='%[1]s'}[`}}{{ .Values.alerts.client.failureWindow }}{{`]) >= `}}{{ .Values.alerts.client.failureCount }}{{` and on (namespace, datasource) increase(fusion_datasource_job_runs_total{status='SUCCESS', namespace='%[1]s'}[`}}{{ .Values.alerts.client.failureWindow }}{{`]) == 0) or count by (namespace, datasource) (time() - fusion_datasource_job_last_run_timestamp{namespace='%[1]s'} > `}}{{ .Values.alerts.client.staleWindowSeconds }}{{`)" $labels.namespace) }}{{ .Labels.datasource }}, {{ end }}`}}
+              {{`Also currently failing (non-critical): {{ range query (printf "(count by (namespace, datasource) (increase(fusion_datasource_job_runs_total{status='FAILED', namespace='%[1]s'}[`}}{{ .Values.alerts.ops.failureWindow }}{{`]) >= `}}{{ .Values.alerts.ops.failureCount }}{{` and on (namespace, datasource) increase(fusion_datasource_job_runs_total{status='SUCCESS', namespace='%[1]s'}[`}}{{ .Values.alerts.ops.failureWindow }}{{`]) == 0) or count by (namespace, datasource) (time() - fusion_datasource_job_last_run_timestamp{namespace='%[1]s'} > `}}{{ .Values.alerts.ops.staleWindowSeconds }}{{`)) unless (count by (namespace, datasource) (increase(fusion_datasource_job_runs_total{status='FAILED', namespace='%[1]s'}[`}}{{ .Values.alerts.client.failureWindow }}{{`]) >= `}}{{ .Values.alerts.client.failureCount }}{{` and on (namespace, datasource) increase(fusion_datasource_job_runs_total{status='SUCCESS', namespace='%[1]s'}[`}}{{ .Values.alerts.client.failureWindow }}{{`]) == 0) or count by (namespace, datasource) (time() - fusion_datasource_job_last_run_timestamp{namespace='%[1]s'} > `}}{{ .Values.alerts.client.staleWindowSeconds }}{{`))" $labels.namespace) }}{{ .Labels.datasource }}, {{ end }}`}}
 {{- end }}
